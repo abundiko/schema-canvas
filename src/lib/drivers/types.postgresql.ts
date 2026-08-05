@@ -1,0 +1,75 @@
+import { makeConfig, registerDriver, type DriverTypeSpec } from "./driverConfig";
+
+export const POSTGRES_TYPES: DriverTypeSpec[] = [
+  { name: "smallint" },
+  { name: "integer" },
+  { name: "int", label: "int", params: "length" },
+  { name: "bigint" },
+  { name: "smallserial", supportsAutoIncrement: true },
+  { name: "serial", supportsAutoIncrement: true },
+  { name: "bigserial", supportsAutoIncrement: true },
+  { name: "decimal", params: "precision-scale" },
+  { name: "numeric", params: "precision-scale" },
+  { name: "real" },
+  { name: "double precision", label: "double precision" },
+  { name: "money" },
+  { name: "varchar", params: "length" },
+  { name: "character varying", label: "character varying", params: "length" },
+  { name: "char", params: "length" },
+  { name: "character", params: "length" },
+  { name: "text" },
+  { name: "boolean" },
+  { name: "date" },
+  { name: "time", params: "length" },
+  { name: "timestamp", params: "length" },
+  { name: "timestamptz" },
+  { name: "uuid" },
+  { name: "json" },
+  { name: "jsonb" },
+  { name: "bytea" },
+  { name: "inet" },
+  { name: "cidr" },
+  { name: "macaddr" },
+  { name: "xml" },
+];
+
+const ARRAYABLE = new Set([
+  "smallint",
+  "integer",
+  "int",
+  "bigint",
+  "decimal",
+  "numeric",
+  "real",
+  "double precision",
+  "money",
+  "varchar",
+  "char",
+  "text",
+  "boolean",
+  "date",
+  "time",
+  "timestamp",
+  "timestamptz",
+  "uuid",
+  "json",
+  "jsonb",
+  "bytea",
+  "inet",
+  "xml",
+]);
+for (const t of POSTGRES_TYPES) {
+  if (ARRAYABLE.has(t.name)) t.supportsArray = true;
+}
+
+registerDriver(
+  makeConfig(
+    "postgresql",
+    "PostgreSQL",
+    { open: '"', close: '"' },
+    "SERIAL",
+    false,
+    true,
+    POSTGRES_TYPES,
+  ),
+);

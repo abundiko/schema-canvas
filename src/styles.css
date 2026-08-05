@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand / accents */
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-100: #e0e7ff;
+  --color-brand-50: #eef2ff;
+  --color-accent-teal: #14b8a6;
+  --color-accent-teal-soft: #99f6e4;
+  --color-accent-rose: #fda4af;
+
+  /* Neutrals */
+  --color-canvas-bg: #fafafa;
+  --color-canvas-dot: #e5e7eb;
+  --color-panel-bg: #ffffff;
+  --color-border: #e5e7eb;
+  --color-border-strong: #d4d4d8;
+  --color-text-primary: #18181b;
+  --color-text-muted: #71717a;
+  --color-text-faint: #a1a1aa;
+
+  /* Elevation */
+  --shadow-panel: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 3px rgb(0 0 0 / 0.06);
+  --shadow-floating: 0 4px 12px rgb(0 0 0 / 0.1), 0 2px 4px rgb(0 0 0 / 0.06);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  background: var(--color-canvas-bg);
+}
+
+/* ---------- React Flow overrides ---------- */
+.react-flow__background {
+  pointer-events: none;
+}
+
+.react-flow__attribution {
+  background: transparent !important;
+  opacity: 0.5;
+}
+
+.react-flow__node {
+  font-family: inherit;
+}
+
+.react-flow__handle {
+  width: 0;
+  height: 0;
+  border: none;
+  background: transparent;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+}
+
+.react-flow__edge-path {
+  stroke: #a1a1aa;
+  stroke-width: 1.5;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--color-brand-500);
+  stroke-width: 2;
+}
+
+/* utility for scrollbars */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #e4e4e7;
+  border-radius: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #d4d4d8;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
