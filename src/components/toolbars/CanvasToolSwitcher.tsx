@@ -11,7 +11,7 @@ export function CanvasToolSwitcher() {
 
   return (
     <div className="pointer-events-none absolute left-3 top-3 z-20 flex items-center gap-1.5">
-      <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-border bg-white p-1 shadow-floating">
+      <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-border bg-white p-1 shadow-floating dark:bg-zinc-900">
         <IconButton
           label="Toggle left panel"
           onClick={() => setPanelCollapsed(!panelCollapsed)}

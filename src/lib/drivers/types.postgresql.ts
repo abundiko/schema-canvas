@@ -30,6 +30,7 @@ export const POSTGRES_TYPES: DriverTypeSpec[] = [
   { name: "inet" },
   { name: "cidr" },
   { name: "macaddr" },
+  { name: "interval" },
   { name: "xml" },
 ];
 

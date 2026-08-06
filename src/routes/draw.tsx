@@ -73,7 +73,7 @@ function DrawPage() {
           <button
             type="button"
             onClick={() => setAiOpen(!aiOpen)}
-            className="absolute right-3 top-3 z-20 flex h-8 items-center gap-1.5 rounded-full border border-border bg-white px-3 text-xs font-semibold text-text-primary shadow-floating transition-colors hover:bg-brand-50 hover:text-brand-600"
+            className="absolute right-3 top-3 z-20 flex h-8 items-center gap-1.5 rounded-full border border-border bg-white px-3 text-xs font-semibold text-text-primary shadow-floating transition-colors hover:bg-brand-50 hover:text-brand-600 dark:bg-zinc-900 dark:hover:bg-brand-500/15"
           >
             <Sparkles size={14} className={aiOpen ? "text-brand-500" : ""} />
             AI
@@ -85,7 +85,7 @@ function DrawPage() {
       </div>
 
       {notice && (
-        <div className="fixed bottom-4 left-1/2 z-[90] -translate-x-1/2 rounded-full border border-border bg-white px-4 py-2 text-xs font-medium text-text-primary shadow-floating">
+        <div className="fixed bottom-4 left-1/2 z-[90] -translate-x-1/2 rounded-full border border-border bg-white px-4 py-2 text-xs font-medium text-text-primary shadow-floating dark:bg-zinc-900">
           {notice}
         </div>
       )}

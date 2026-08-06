@@ -1,12 +1,62 @@
-import { useState } from "react";
-import { ChevronDown, Database, FileJson, FileText, Image, Plus, Save } from "lucide-react";
+import { Check, ChevronDown, Database, FileJson, FileText, Image, Monitor, Moon, Plus, Save, Sun } from "lucide-react";
 
-import { useDiagramStore, createBlankDiagram, MAX_TABLES } from "#/lib/store/diagramStore";
-import { useUiStore } from "#/lib/store/uiStore";
+import { useDiagramStore, createBlankDiagram } from "#/lib/store/diagramStore";
+import { resolveTheme, useUiStore, type ThemeMode } from "#/lib/store/uiStore";
 import { exportSql, exportImage, exportDiagramJson } from "#/lib/export/exportActions";
 import { DRIVERS, getDriver } from "#/lib/drivers";
 import { saveDiagram } from "#/lib/persistence/autosave";
 import { Dropdown, MenuItem } from "#/components/ui";
+
+const THEME_OPTIONS: Array<{ value: ThemeMode; label: string; Icon: typeof Sun }> = [
+  { value: "light", label: "Light", Icon: Sun },
+  { value: "dark", label: "Dark", Icon: Moon },
+  { value: "system", label: "System", Icon: Monitor },
+];
+
+function ThemeSwitcher() {
+  const theme = useUiStore((s) => s.theme);
+  const setTheme = useUiStore((s) => s.setTheme);
+  const resolved = resolveTheme(theme);
+  const Icon = resolved === "dark" ? Moon : Sun;
+
+  return (
+    <Dropdown
+      width="w-40"
+      trigger={({ toggle }) => (
+        <button
+          type="button"
+          aria-label="Theme switcher"
+          title="Theme"
+          onClick={toggle}
+          className="flex h-8 items-center gap-1 rounded-md border border-border bg-white px-2 text-xs font-medium text-text-primary shadow-panel hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+        >
+          <Icon size={14} className={theme === "dark" ? "text-accent-teal" : "text-amber-500"} />
+          <span className="hidden sm:inline">{theme === "system" ? "System" : resolved === "dark" ? "Dark" : "Light"}</span>
+        </button>
+      )}
+    >
+      {({ close }) => (
+        <>
+          {THEME_OPTIONS.map(({ value, label, Icon: OptionIcon }) => (
+            <MenuItem
+              key={value}
+              onClick={() => {
+                close();
+                setTheme(value);
+              }}
+            >
+              <span className="flex w-full items-center gap-2">
+                <OptionIcon size={14} className={value === "dark" ? "text-accent-teal" : "text-amber-500"} />
+                {label}
+                {theme === value && <Check size={14} className="ml-auto text-brand-500" />}
+              </span>
+            </MenuItem>
+          ))}
+        </>
+      )}
+    </Dropdown>
+  );
+}
 
 export function TopNavBar() {
   const diagram = useDiagramStore((s) => s.diagram);
@@ -14,7 +64,6 @@ export function TopNavBar() {
   const setDriver = useDiagramStore((s) => s.setDriver);
   const openDialog = useUiStore((s) => s.openDialog);
   const showNotice = useUiStore((s) => s.showNotice);
-  const [saveOpen, setSaveOpen] = useState(false);
 
   const currentDriver = DRIVERS.find((d) => d.id === diagram.driver);
 
@@ -50,7 +99,7 @@ export function TopNavBar() {
   };
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-white px-3">
+    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-white px-3 dark:bg-panel-bg">
       <div className="flex items-center gap-1">
         <a href="/" className="mr-1 flex items-center gap-1.5 text-sm font-bold text-text-primary">
           <span className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-500 text-white">
@@ -65,7 +114,7 @@ export function TopNavBar() {
             <button
               type="button"
               onClick={toggle}
-              className="flex h-8 items-center gap-1 rounded-md px-2 text-sm text-text-primary hover:bg-zinc-100"
+              className="flex h-8 items-center gap-1 rounded-md px-2 text-sm text-text-primary hover:bg-zinc-100 dark:hover:bg-zinc-800"
             >
               File <ChevronDown size={13} className="text-text-faint" />
             </button>
@@ -125,16 +174,14 @@ export function TopNavBar() {
         <button
           type="button"
           onClick={() => openDialog("share")}
-          className="flex h-8 items-center gap-1 rounded-md px-2 text-sm text-text-primary hover:bg-zinc-100"
+          className="flex h-8 items-center gap-1 rounded-md px-2 text-sm text-text-primary hover:bg-zinc-100 dark:hover:bg-zinc-800"
         >
           Share
         </button>
       </div>
 
       <div className="relative flex items-center gap-2">
-        <span className="hidden text-[11px] text-text-faint lg:inline">
-          {diagram.tables.length}/{MAX_TABLES} tables
-        </span>
+        <ThemeSwitcher />
 
         <Dropdown
           width="w-44"
@@ -142,7 +189,7 @@ export function TopNavBar() {
             <button
               type="button"
               onClick={toggle}
-              className="flex h-8 items-center gap-1 rounded-md border border-border bg-white px-2 text-xs font-medium text-text-primary shadow-panel hover:bg-zinc-50"
+              className="flex h-8 items-center gap-1 rounded-md border border-border bg-white px-2 text-xs font-medium text-text-primary shadow-panel hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800"
             >
               {currentDriver?.label ?? "MySQL"} <ChevronDown size={13} className="text-text-faint" />
             </button>
@@ -169,34 +216,6 @@ export function TopNavBar() {
             </>
           )}
         </Dropdown>
-
-        <button
-          type="button"
-          onClick={() => setSaveOpen((o) => !o)}
-          className="flex h-8 items-center gap-1 rounded-md bg-brand-500 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-brand-600"
-        >
-          Save to account
-        </button>
-        {saveOpen && (
-          <div className="absolute right-3 top-12 z-50 w-72 rounded-lg border border-border bg-white p-3 shadow-floating">
-            <p className="text-xs text-text-primary">
-              <strong>No account needed.</strong> Your diagram autosaves to this
-              browser (IndexedDB / localStorage) and can be shared via a snapshot
-              link.
-            </p>
-            <p className="mt-2 text-[11px] text-text-faint">
-              Team sync, version history and private diagrams are Pro features not
-              included in this build.
-            </p>
-            <button
-              type="button"
-              className="mt-2 w-full rounded-md bg-brand-50 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-100"
-              onClick={() => setSaveOpen(false)}
-            >
-              Got it
-            </button>
-          </div>
-        )}
       </div>
     </header>
   );

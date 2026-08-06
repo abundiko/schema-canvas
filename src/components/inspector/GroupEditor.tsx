@@ -49,7 +49,7 @@ export function GroupEditor({ group }: { group: Group }) {
             {members.map((t) => (
               <div
                 key={t.id}
-                className="flex items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-zinc-50"
+                className="flex items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800"
               >
                 <span
                   className="h-2.5 w-2.5 rounded-sm"
@@ -75,7 +75,7 @@ export function GroupEditor({ group }: { group: Group }) {
             {memberNotes.map((n) => (
               <div
                 key={n.id}
-                className="flex items-center gap-2 rounded px-1.5 py-1 text-xs text-text-muted hover:bg-zinc-50"
+                className="flex items-center gap-2 rounded px-1.5 py-1 text-xs text-text-muted hover:bg-zinc-50 dark:hover:bg-zinc-800"
               >
                 <span
                   className="h-2.5 w-2.5 rounded-sm"

@@ -121,7 +121,7 @@ export function AIPanel() {
   };
 
   return (
-    <div className="absolute right-3 top-14 z-30 flex h-[min(560px,calc(100%-72px))] w-80 flex-col overflow-hidden rounded-xl border border-border bg-white shadow-floating">
+    <div className="absolute right-3 top-14 z-30 flex h-[min(560px,calc(100%-72px))] w-80 flex-col overflow-hidden rounded-xl border border-border bg-white shadow-floating dark:bg-zinc-900">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <span className="flex items-center gap-1.5 text-sm font-semibold text-text-primary">
           <Sparkles size={15} className="text-brand-500" /> AI assistant
@@ -130,7 +130,7 @@ export function AIPanel() {
           type="button"
           aria-label="Close AI panel"
           onClick={() => setAiOpen(false)}
-          className="rounded p-1 text-text-muted hover:bg-zinc-100 hover:text-text-primary"
+          className="rounded p-1 text-text-muted hover:bg-zinc-100 hover:text-text-primary dark:hover:bg-zinc-800"
         >
           <X size={15} />
         </button>
@@ -145,8 +145,8 @@ export function AIPanel() {
             className={cn(
               "rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors",
               tab === t
-                ? "bg-brand-50 text-brand-600"
-                : "text-text-muted hover:bg-zinc-50",
+                ? "bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400"
+                : "text-text-muted hover:bg-zinc-50 dark:hover:bg-zinc-800",
             )}
           >
             {t}
@@ -162,7 +162,7 @@ export function AIPanel() {
               onChange={(e) => setPrompt(e.target.value)}
               rows={3}
               placeholder='e.g. "add invoicing to the billing schema"'
-              className="w-full rounded-md border border-border bg-white px-2 py-1.5 text-xs outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+              className="w-full rounded-md border border-border bg-white px-2 py-1.5 text-xs outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:bg-zinc-950"
             />
             <Button
               variant="primary"
@@ -175,7 +175,7 @@ export function AIPanel() {
             </Button>
 
             {proposal && !applied && (
-              <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-2.5">
+              <div                   className="rounded-lg border border-brand-200 bg-brand-50/60 p-2.5 dark:border-brand-500/30 dark:bg-brand-500/10">
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-brand-700">
                   Proposed additions
                 </p>
@@ -212,7 +212,7 @@ export function AIPanel() {
               suggestions.map((s) => (
                 <div
                   key={s.id}
-                  className="rounded-lg border border-border bg-zinc-50/70 p-2.5"
+                  className="rounded-lg border border-border bg-zinc-50/70 p-2.5 dark:bg-zinc-800/60"
                 >
                   <div className="flex items-start gap-2">
                     <span

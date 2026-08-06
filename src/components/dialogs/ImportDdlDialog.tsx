@@ -211,7 +211,7 @@ export function ImportDdlDialog() {
           }}
           rows={8}
           placeholder="CREATE TABLE `users` ( ... );"
-          className="w-full rounded-md border border-border bg-white p-2 font-mono text-xs outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+          className="w-full rounded-md border border-border bg-white p-2 font-mono text-xs outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:bg-zinc-950"
         />
 
         <div className="grid grid-cols-2 gap-3">
@@ -243,14 +243,14 @@ export function ImportDdlDialog() {
         </div>
 
         {error && (
-          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+          <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700 dark:border-red-500/40 dark:bg-red-500/10">
             <TriangleAlert size={14} className="mt-0.5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {result && (
-          <div className="rounded-md border border-border bg-zinc-50 p-3 text-xs">
+          <div className="rounded-md border border-border bg-zinc-50 p-3 text-xs dark:bg-zinc-800/60">
             <div className="mb-1 flex items-center gap-1.5 font-medium text-text-primary">
               <ClipboardPaste size={13} className="text-accent-teal" />
               Imported {result.tables} table{result.tables === 1 ? "" : "s"} and{" "}
@@ -258,13 +258,13 @@ export function ImportDdlDialog() {
               {result.relationships === 1 ? "" : "s"}
             </div>
             {result.warnings.map((w, i) => (
-              <div key={i} className="flex items-start gap-1.5 text-amber-700">
+              <div key={i} className="flex items-start gap-1.5 text-amber-700 dark:text-amber-400">
                 <span className="mt-0.5 shrink-0">•</span>
                 <span>{w}</span>
               </div>
             ))}
             {result.truncated.length > 0 && (
-              <div className="mt-1 text-orange-700">
+              <div className="mt-1 text-orange-700 dark:text-orange-400">
                 Sandbox limit is {MAX_TABLES} tables — truncated:{" "}
                 {result.truncated.join(", ")}
               </div>

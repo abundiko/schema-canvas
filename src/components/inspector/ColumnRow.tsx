@@ -41,7 +41,7 @@ export function ColumnRow({
 
   return (
     <div
-      className="group grid grid-cols-[14px_minmax(70px,1.4fr)_minmax(60px,1fr)_16px_72px_20px_18px] items-center gap-1 rounded px-0.5 py-0.5 hover:bg-zinc-50"
+      className="group grid grid-cols-[14px_minmax(70px,1fr)_128px_16px_26px_20px_18px] items-center gap-1 rounded px-0.5 py-0.5 hover:bg-zinc-50 dark:hover:bg-zinc-800"
       draggable={draggable}
       onDragStart={onDragStart}
       onDrop={onDrop}
@@ -88,8 +88,8 @@ export function ColumnRow({
         className={cn(
           "flex h-5 w-4 items-center justify-center rounded text-[11px] font-semibold",
           column.nullable
-            ? "bg-zinc-100 text-zinc-400"
-            : "bg-brand-100 text-brand-600",
+            ? "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500"
+            : "bg-brand-100 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400",
         )}
       >
         {column.nullable ? "?" : "N"}
@@ -103,9 +103,10 @@ export function ColumnRow({
             keyType: e.target.value as Column["keyType"],
           })
         }
-        className="h-6 w-full rounded border border-transparent bg-transparent px-1 text-[11px] text-text-muted outline-none hover:border-border focus:border-brand-500"
+        title={column.keyType === "none" ? "No key" : `${column.keyType} key`}
+        className="h-6 w-6 appearance-none rounded border border-transparent bg-transparent px-0 text-center text-[10px] font-semibold text-text-muted outline-none hover:border-border focus:border-brand-500 dark:focus:border-brand-500"
       >
-        <option value="none">none</option>
+        <option value="none" />
         <option value="primary">PK</option>
         <option value="unique">UQ</option>
         <option value="index">IX</option>

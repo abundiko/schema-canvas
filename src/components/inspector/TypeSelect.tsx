@@ -57,7 +57,7 @@ export function TypeSelect({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex h-6 w-full items-center gap-1 rounded border border-border px-1.5 text-[11px] text-text-primary hover:bg-zinc-50"
+        className="flex h-6 w-full items-center gap-1 rounded border border-border px-1.5 text-[11px] text-text-primary hover:bg-zinc-50 dark:hover:bg-zinc-800"
       >
         <span className="min-w-0 flex-1 truncate text-left font-medium">
           {((current?.label ?? value) || "type").toUpperCase()}
@@ -66,7 +66,7 @@ export function TypeSelect({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-40 mt-1 w-56 rounded-lg border border-border bg-white shadow-floating">
+        <div className="absolute left-0 top-full z-40 mt-1 w-56 rounded-lg border border-border bg-white shadow-floating dark:bg-zinc-900">
           <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
             <Search size={12} className="text-text-faint" />
             <input
@@ -88,8 +88,8 @@ export function TypeSelect({
                   setQuery("");
                 }}
                 className={cn(
-                  "flex w-full items-center justify-between rounded px-2 py-1 text-left text-[11px] hover:bg-brand-50",
-                  t.name === value.toLowerCase() && "text-brand-600",
+                  "flex w-full items-center justify-between rounded px-2 py-1 text-left text-[11px] hover:bg-brand-50 dark:hover:bg-brand-500/15",
+                  t.name === value.toLowerCase() && "text-brand-600 dark:text-brand-400",
                 )}
               >
                 <span className="font-medium">{(t.label ?? t.name).toUpperCase()}</span>

@@ -33,6 +33,7 @@ export const MARIADB_TYPES: DriverTypeSpec[] = [
   { name: "year", params: "length" },
   { name: "boolean" },
   { name: "json" },
+  { name: "geometry" },
   { name: "enum", supportsEnum: true },
   { name: "set", supportsSet: true },
   { name: "uuid" },

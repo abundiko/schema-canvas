@@ -34,7 +34,7 @@ export function ShareDialog() {
             readOnly
             value={url}
             onFocus={(e) => e.target.select()}
-            className="h-8 w-full rounded-md border border-border bg-zinc-50 px-2 font-mono text-[11px] outline-none focus:border-brand-500"
+            className="h-8 w-full rounded-md border border-border bg-zinc-50 px-2 font-mono text-[11px] outline-none focus:border-brand-500 dark:bg-zinc-800/60"
           />
           <Button variant="primary" onClick={() => void copy()}>
             {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? "Copied" : "Copy"}

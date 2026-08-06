@@ -14,7 +14,7 @@ export function InspectorPanel() {
   const relationship = useSelectedRelationship();
 
   return (
-    <div className="flex h-full w-72 flex-col border-r border-border bg-panel-bg shadow-panel">
+    <div className="flex h-full w-[316px] flex-col border-r border-border bg-panel-bg shadow-panel">
       <div className="scrollbar-thin flex-1 overflow-y-auto">
         {selection.type === "none" && <TableList />}
         {selection.type === "table" && table && (

@@ -59,8 +59,8 @@ export function TableList() {
       </div>
 
       {selection.type === "tables" && (
-        <div className="mx-3 mb-2 rounded-md border border-brand-200 bg-brand-50 p-2">
-          <p className="text-[11px] text-brand-700">
+        <div className="mx-3 mb-2 rounded-md border border-brand-200 bg-brand-50 p-2 dark:border-brand-500/30 dark:bg-brand-500/10">
+          <p className="text-[11px] text-brand-700 dark:text-brand-400">
             {selection.tableIds.length} tables selected
           </p>
           <Button
@@ -74,7 +74,7 @@ export function TableList() {
       )}
 
       <div className="px-3 pb-2">
-        <div className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-white px-2">
+        <div className="flex h-7 items-center gap-1.5 rounded-md border border-border bg-white px-2 dark:bg-zinc-900">
           <Search size={12} className="text-text-faint" />
           <input
             value={query}
@@ -100,8 +100,8 @@ export function TableList() {
               type="button"
               onClick={() => handleSelect(t.id)}
               className={cn(
-                "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-zinc-100",
-                active && "bg-brand-50 text-brand-700 hover:bg-brand-50",
+                "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800",
+                active && "bg-brand-50 text-brand-700 hover:bg-brand-50 dark:bg-brand-500/15 dark:text-brand-400 dark:hover:bg-brand-500/15",
               )}
             >
               <span

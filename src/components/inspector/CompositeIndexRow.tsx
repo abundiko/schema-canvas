@@ -23,7 +23,7 @@ export function CompositeIndexRow({
 
   return (
     <div
-      className="group flex items-center gap-1 rounded px-0.5 py-1 hover:bg-zinc-50"
+      className="group flex items-center gap-1 rounded px-0.5 py-1 hover:bg-zinc-50 dark:hover:bg-zinc-800"
       draggable={draggable}
       onDragStart={onDragStart}
       onDrop={onDrop}
@@ -48,8 +48,8 @@ export function CompositeIndexRow({
               className={cn(
                 "rounded border px-1.5 py-0.5 text-[10px] transition-colors",
                 checked
-                  ? "border-brand-300 bg-brand-50 text-brand-700"
-                  : "border-border text-text-muted hover:border-zinc-300",
+                  ? "border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-500/40 dark:bg-brand-500/15 dark:text-brand-400"
+                  : "border-border text-text-muted hover:border-zinc-300 dark:hover:border-zinc-600",
               )}
               title="Toggle column in index"
             >

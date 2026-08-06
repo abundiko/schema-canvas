@@ -23,6 +23,28 @@ function now(): string {
   return new Date().toISOString();
 }
 
+export function isSelectionEqual(a: Selection, b: Selection): boolean {
+  if (a.type !== b.type) return false;
+  switch (a.type) {
+    case "none":
+      return true;
+    case "table":
+      return b.type === "table" && a.tableId === b.tableId;
+    case "tables":
+      return (
+        b.type === "tables" &&
+        a.tableIds.length === b.tableIds.length &&
+        a.tableIds.every((id, i) => id === b.tableIds[i])
+      );
+    case "group":
+      return b.type === "group" && a.groupId === b.groupId;
+    case "note":
+      return b.type === "note" && a.noteId === b.noteId;
+    case "relationship":
+      return b.type === "relationship" && a.relationshipId === b.relationshipId;
+  }
+}
+
 function createDefaultTable(driver: Driver): TableEntity {
   const type = driver === "postgresql" ? "serial" : "int";
   return {
@@ -671,7 +693,10 @@ export const useDiagramStore = create<DiagramStoreState>()(
               : s.selection,
         })),
 
-      setSelection: (selection) => set({ selection }),
+      setSelection: (selection) => {
+        if (isSelectionEqual(get().selection, selection)) return;
+        set({ selection });
+      },
       setActiveTool: (activeTool) => set({ activeTool }),
       setPanelCollapsed: (panelCollapsed) => set({ panelCollapsed }),
     }),

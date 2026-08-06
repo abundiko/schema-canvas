@@ -51,7 +51,7 @@ function Home() {
   return (
     <div className="min-h-screen bg-canvas-bg text-text-primary">
       {/* nav */}
-      <nav className="flex h-14 items-center justify-between border-b border-border bg-white px-6">
+      <nav className="flex h-14 items-center justify-between border-b border-border bg-white px-6 dark:bg-panel-bg">
         <span className="flex items-center gap-1.5 text-sm font-bold">
           <span className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-500 text-white">
             <Database size={15} />
@@ -86,7 +86,7 @@ function Home() {
           >
             Start drawing <ArrowRight size={15} />
           </Link>
-          <span className="flex h-11 items-center gap-1.5 rounded-lg border border-border bg-white px-4 text-xs text-text-muted shadow-panel">
+          <span className="flex h-11 items-center gap-1.5 rounded-lg border border-border bg-white px-4 text-xs text-text-muted shadow-panel dark:bg-zinc-900">
             <StickyNote size={13} className="text-amber-500" />
             20-table sandbox · autosaves locally
           </span>
@@ -98,9 +98,9 @@ function Home() {
         {FEATURES.map((f) => (
           <div
             key={f.title}
-            className="rounded-xl border border-border bg-white p-5 shadow-panel"
+            className="rounded-xl border border-border bg-white p-5 shadow-panel dark:bg-zinc-900"
           >
-            <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+            <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400">
               <f.icon size={17} />
             </span>
             <h3 className="text-sm font-semibold">{f.title}</h3>

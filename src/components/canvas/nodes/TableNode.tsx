@@ -19,14 +19,21 @@ function KeyGlyph({ keyType }: { keyType: string }) {
     );
   if (keyType === "index")
     return (
-      <span className="flex items-center text-zinc-400" title="Index">
+      <span className="flex items-center text-zinc-400 dark:text-zinc-500" title="Index">
         <ListOrdered size={11} strokeWidth={2.5} />
       </span>
     );
   return null;
 }
 
-function TableNodeInner({ data }: NodeProps<TableNodeType>) {
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const n = parseInt(full, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+function TableNodeInner({ data, selected }: NodeProps<TableNodeType>) {
   const table = data.table;
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(table.name);
@@ -54,7 +61,12 @@ function TableNodeInner({ data }: NodeProps<TableNodeType>) {
 
   return (
     <div
-      className="w-[240px] rounded-lg border border-border bg-white shadow-panel transition-shadow"
+      className="w-[240px] rounded-lg border border-border bg-white shadow-panel transition-shadow dark:bg-zinc-900"
+      style={{
+        boxShadow: selected
+          ? `0 0 0 2px ${table.color}, 0 0 18px ${hexToRgba(table.color, 0.45)}`
+          : undefined,
+      }}
       onDoubleClick={() => {
         setDraftName(table.name);
         setEditing(true);
@@ -62,7 +74,7 @@ function TableNodeInner({ data }: NodeProps<TableNodeType>) {
     >
       {/* header */}
       <div
-        className="relative flex h-8 items-center justify-center rounded-t-lg border-b border-black/10 px-2"
+        className="relative flex h-8 items-center justify-center rounded-t-lg border-b border-black/10 px-2 dark:border-black/40"
         style={{ backgroundColor: table.color }}
       >
         {editing ? (
@@ -90,17 +102,17 @@ function TableNodeInner({ data }: NodeProps<TableNodeType>) {
       </div>
 
       {/* columns */}
-      <div className="max-h-[420px] overflow-y-auto scrollbar-thin">
+      <div className="max-h-[420px] overflow-y-auto scrollbar-thin px-2.5">
         {columns.map((col) => (
           <div
             key={col.id}
-            className="group relative flex h-[26px] items-center gap-1 border-b border-border/60 px-2 text-[12px] last:border-b-0 hover:bg-zinc-50"
+            className="group relative flex h-[26px] items-center gap-1 border-b border-border/60 px-2 text-[12px] last:border-b-0 hover:bg-zinc-50 dark:hover:bg-zinc-800"
           >
             <Handle
               type="target"
               position={Position.Left}
               id={`${col.id}`}
-              className="!left-[-7px] !top-1/2 !h-2 !w-2 !-translate-y-1/2 !rounded-full !border-2 !border-white !bg-brand-500 !opacity-100"
+              className="!left-[-7px] !top-1/2 !h-2 !w-2 !-translate-y-1/2 !rounded-full !border-2 !border-white !bg-brand-500 !opacity-100 dark:!border-zinc-900"
             />
             <span className="w-3.5 shrink-0">
               <KeyGlyph keyType={col.keyType} />
@@ -128,7 +140,7 @@ function TableNodeInner({ data }: NodeProps<TableNodeType>) {
               type="source"
               position={Position.Right}
               id={`${col.id}`}
-              className="!right-[-7px] !top-1/2 !h-2 !w-2 !-translate-y-1/2 !rounded-full !border-2 !border-white !bg-brand-500 !opacity-100"
+              className="!right-[-7px] !top-1/2 !h-2 !w-2 !-translate-y-1/2 !rounded-full !border-2 !border-white !bg-brand-500 !opacity-100 dark:!border-zinc-900"
             />
           </div>
         ))}
@@ -136,7 +148,7 @@ function TableNodeInner({ data }: NodeProps<TableNodeType>) {
 
       {/* composite indexes */}
       {indexes.length > 0 && (
-        <div className="border-t border-border bg-zinc-50/60 px-2 py-1.5">
+        <div className="border-t border-border bg-zinc-50/60 px-2 py-1.5 dark:bg-zinc-800/60">
           {indexes.map((ix) => {
             const names = ix.columnIds
               .map((id) => table.columns.find((c) => c.id === id)?.name)
@@ -148,7 +160,7 @@ function TableNodeInner({ data }: NodeProps<TableNodeType>) {
               ) : ix.type === "unique" ? (
                 <Snowflake size={10} className="text-amber-500" />
               ) : (
-                <ListOrdered size={10} className="text-zinc-400" />
+                <ListOrdered size={10} className="text-zinc-400 dark:text-zinc-500" />
               );
             return (
               <div

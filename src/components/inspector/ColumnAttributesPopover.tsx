@@ -27,7 +27,7 @@ export function ColumnAttributesPopover({
 
   return (
     <Dropdown
-      align="right"
+      align="left"
       width="w-72"
       trigger={({ toggle }) => (
         <button
@@ -35,7 +35,7 @@ export function ColumnAttributesPopover({
           aria-label="Column attributes"
           title="Attributes"
           onClick={toggle}
-          className="flex h-6 w-5 items-center justify-center rounded text-text-faint hover:bg-zinc-100 hover:text-text-primary"
+          className="flex h-6 w-5 items-center justify-center rounded text-text-faint hover:bg-zinc-100 hover:text-text-primary dark:hover:bg-zinc-800"
         >
           <MoreHorizontal size={13} />
         </button>
@@ -55,9 +55,9 @@ export function ColumnAttributesPopover({
               <span
                 className={cn(
                   "flex h-7 shrink-0 items-center rounded border px-1.5 text-[10px] font-medium",
-                  kind === "string" && "border-teal-200 bg-teal-50 text-teal-600",
-                  kind === "number" && "border-blue-200 bg-blue-50 text-blue-600",
-                  kind === "function" && "border-violet-200 bg-violet-50 text-violet-600",
+                  kind === "string" && "border-teal-200 bg-teal-50 text-teal-600 dark:border-teal-500/40 dark:bg-teal-500/15 dark:text-teal-400",
+                  kind === "number" && "border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-400",
+                  kind === "function" && "border-violet-200 bg-violet-50 text-violet-600 dark:border-violet-500/40 dark:bg-violet-500/15 dark:text-violet-400",
                 )}
               >
                 {kind}
@@ -112,7 +112,7 @@ export function ColumnAttributesPopover({
                     onChange={(e) =>
                       onChange({ identity: { seed: Number(e.target.value) || 0, increment: column.identity?.increment ?? 1 } })
                     }
-                    className="h-7 w-full rounded border border-border px-1.5 text-xs"
+                    className="h-7 w-full rounded border border-border px-1.5 text-xs dark:bg-zinc-950"
                   />
                   <input
                     type="number"
@@ -121,7 +121,7 @@ export function ColumnAttributesPopover({
                     onChange={(e) =>
                       onChange({ identity: { seed: column.identity?.seed ?? 1, increment: Number(e.target.value) || 0 } })
                     }
-                    className="h-7 w-full rounded border border-border px-1.5 text-xs"
+                    className="h-7 w-full rounded border border-border px-1.5 text-xs dark:bg-zinc-950"
                   />
                 </div>
               )}
@@ -155,7 +155,7 @@ export function ColumnAttributesPopover({
                   })
                 }
                 rows={3}
-                className="w-full rounded border border-border px-1.5 py-1 text-xs"
+                className="w-full rounded border border-border px-1.5 py-1 text-xs dark:bg-zinc-950"
               />
             </Field>
           )}
@@ -172,7 +172,7 @@ export function ColumnAttributesPopover({
                   })
                 }
                 rows={3}
-                className="w-full rounded border border-border px-1.5 py-1 text-xs"
+                className="w-full rounded border border-border px-1.5 py-1 text-xs dark:bg-zinc-950"
               />
             </Field>
           )}
@@ -190,7 +190,7 @@ export function ColumnAttributesPopover({
           <button
             type="button"
             onClick={close}
-            className="mt-1 w-full rounded bg-brand-50 py-1 text-[11px] font-medium text-brand-600 hover:bg-brand-100"
+            className="mt-1 w-full rounded bg-brand-50 py-1 text-[11px] font-medium text-brand-600 hover:bg-brand-100 dark:bg-brand-500/15 dark:hover:bg-brand-500/25"
           >
             Done
           </button>

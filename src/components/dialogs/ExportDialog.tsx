@@ -49,7 +49,7 @@ export function ExportDialog() {
               {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Copied" : "Copy"}
             </Button>
           </div>
-          <pre className="scrollbar-thin max-h-72 overflow-auto rounded-md border border-border bg-zinc-50 p-3 font-mono text-[11px] leading-relaxed text-text-primary">
+          <pre className="scrollbar-thin max-h-72 overflow-auto rounded-md border border-border bg-zinc-50 p-3 font-mono text-[11px] leading-relaxed text-text-primary dark:bg-zinc-800/60">
             {sql}
           </pre>
         </div>

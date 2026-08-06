@@ -14,7 +14,7 @@ export function StickyNoteEditor({ note }: { note: StickyNote }) {
           onChange={(e) => updateNote(note.id, { content: e.target.value })}
           rows={5}
           autoFocus
-          className="w-full rounded-md border border-border bg-white px-2 py-1.5 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+          className="w-full rounded-md border border-border bg-white px-2 py-1.5 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:bg-zinc-950"
         />
       </Field>
 

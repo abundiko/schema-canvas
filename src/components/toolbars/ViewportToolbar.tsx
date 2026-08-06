@@ -38,7 +38,7 @@ export function ViewportToolbar() {
 
   return (
     <div className="pointer-events-none absolute bottom-3 right-3 z-20 flex items-center gap-1.5">
-      <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-border bg-white p-1 shadow-floating">
+      <div className="pointer-events-auto flex items-center gap-0.5 rounded-full border border-border bg-white p-1 shadow-floating dark:bg-zinc-900">
         <IconButton
           label="Select tool"
           active={activeTool === "select"}
@@ -139,7 +139,7 @@ function ZoomPercent() {
       type="button"
       title="Reset zoom to 100%"
       onClick={() => emitCanvasEvent({ type: "zoom-reset" })}
-      className="h-7 min-w-11 rounded-md px-1 text-center text-[11px] font-medium tabular-nums text-text-muted hover:bg-zinc-100 hover:text-text-primary"
+      className="h-7 min-w-11 rounded-md px-1 text-center text-[11px] font-medium tabular-nums text-text-muted hover:bg-zinc-100 hover:text-text-primary dark:hover:bg-zinc-800"
     >
       {Math.round(zoom * 100)}%
     </button>

@@ -9,6 +9,7 @@ import {
   useEdgesState,
   useNodesState,
   useReactFlow,
+  useStoreApi,
   SelectionMode,
   ConnectionLineType,
   type Connection,
@@ -73,7 +74,6 @@ interface GroupDragState {
 
 function DiagramCanvasInner() {
   const diagram = useDiagramStore((s) => s.diagram);
-  const selection = useDiagramStore((s) => s.selection);
   const activeTool = useDiagramStore((s) => s.activeTool);
   const setSelection = useDiagramStore((s) => s.setSelection);
 
@@ -82,6 +82,7 @@ function DiagramCanvasInner() {
   const [drawRect, setDrawRect] = useState<DrawRect | null>(null);
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
   const busyRef = useRef(false);
+  const suppressPaneClickRef = useRef(false);
   const groupDragRef = useRef<GroupDragState | null>(null);
   const lastDrawRef = useRef<DrawRect | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -151,15 +152,6 @@ function DiagramCanvasInner() {
 
   /* ---------------- derive nodes/edges from the store ---------------- */
   const desired = useMemo(() => {
-    const selTables: string[] =
-      selection.type === "table"
-        ? [selection.tableId]
-        : selection.type === "tables"
-          ? selection.tableIds
-          : [];
-    const selGroup = selection.type === "group" ? selection.groupId : null;
-    const selNote = selection.type === "note" ? selection.noteId : null;
-
     const nodes: Node[] = [];
     for (const g of diagram.groups) {
       nodes.push({
@@ -172,7 +164,6 @@ function DiagramCanvasInner() {
         selectable: true,
         draggable: true,
         dragHandle: ".group-drag-handle",
-        selected: g.id === selGroup,
       });
     }
     for (const t of diagram.tables) {
@@ -186,7 +177,6 @@ function DiagramCanvasInner() {
           autoFocusName: autoFocusId === t.id,
         },
         zIndex: 1,
-        selected: selTables.includes(t.id),
       });
     }
     for (const n of diagram.notes) {
@@ -197,7 +187,6 @@ function DiagramCanvasInner() {
         data: { note: n, onResizeCommit: handleNoteResizeCommit },
         style: { width: n.size.width, height: n.size.height },
         zIndex: 1,
-        selected: n.id === selNote,
       });
     }
 
@@ -211,18 +200,30 @@ function DiagramCanvasInner() {
         sourceHandle: rel.sourceColumnId,
         targetHandle: rel.targetColumnId,
         data: { cardinality: rel.cardinality },
-        selected:
-          selection.type === "relationship" && selection.relationshipId === rel.id,
       });
     }
     return { nodes, edges };
-  }, [diagram, selection, autoFocusId, handleTableRename, handleGroupResizeCommit, handleNoteResizeCommit]);
+  }, [diagram, autoFocusId, handleTableRename, handleGroupResizeCommit, handleNoteResizeCommit]);
 
   /* ---------------- sync store → RF (skipped mid-drag) ---------------- */
+  const storeApi = useStoreApi();
   useEffect(() => {
     if (busyRef.current) return;
-    setNodes(desired.nodes);
-    setEdges(desired.edges);
+    const { nodeLookup, edgeLookup } = storeApi.getState();
+    const selectedNodeIds = new Set(
+      [...nodeLookup.values()].filter((n) => n.selected).map((n) => n.id),
+    );
+    const selectedEdgeIds = new Set(
+      [...edgeLookup.values()].filter((e) => e.selected).map((e) => e.id),
+    );
+    const nodesWithSelection = desired.nodes.map((n) =>
+      selectedNodeIds.has(n.id) ? { ...n, selected: true } : n,
+    );
+    const edgesWithSelection = desired.edges.map((e) =>
+      selectedEdgeIds.has(e.id) ? { ...e, selected: true } : e,
+    );
+    setNodes(nodesWithSelection);
+    setEdges(edgesWithSelection);
   }, [desired, setNodes, setEdges]);
 
   /* ---------------- user changes ---------------- */
@@ -251,8 +252,6 @@ function DiagramCanvasInner() {
         } else {
           setSelection({ type: "none" });
         }
-      } else {
-        setSelection({ type: "none" });
       }
     },
     [isTable, isGroup, isNote, setSelection],
@@ -378,6 +377,10 @@ function DiagramCanvasInner() {
           if (id) store.moveNote(id, pos);
         }
         store.setActiveTool("select");
+        suppressPaneClickRef.current = true;
+        window.setTimeout(() => {
+          suppressPaneClickRef.current = false;
+        }, 500);
         return;
       }
 
@@ -425,6 +428,10 @@ function DiagramCanvasInner() {
           });
         }
         store.setActiveTool("select");
+        suppressPaneClickRef.current = true;
+        window.setTimeout(() => {
+          suppressPaneClickRef.current = false;
+        }, 500);
       };
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", onUp);
@@ -433,6 +440,10 @@ function DiagramCanvasInner() {
   );
 
   const handlePaneClick = useCallback(() => {
+    if (suppressPaneClickRef.current) {
+      suppressPaneClickRef.current = false;
+      return;
+    }
     const store = useDiagramStore.getState();
     if (store.activeTool === "select") {
       setSelection({ type: "none" });
@@ -474,7 +485,7 @@ function DiagramCanvasInner() {
           variant={BackgroundVariant.Dots}
           gap={22}
           size={1}
-          color="#e5e7eb"
+          color="var(--color-canvas-dot)"
           className={gridVisible ? "" : "hidden"}
         />
         {drawRect && (

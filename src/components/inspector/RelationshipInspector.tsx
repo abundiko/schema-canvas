@@ -33,7 +33,7 @@ export function RelationshipInspector({ relationship }: { relationship: Relation
         />
       </Field>
 
-      <div className="rounded-md border border-border bg-zinc-50 p-2 text-xs text-text-muted">
+      <div className="rounded-md border border-border bg-zinc-50 p-2 text-xs text-text-muted dark:bg-zinc-800/60">
         <div className="flex items-center gap-1.5">
           <span className="font-medium text-text-primary">{src?.name ?? "?"}</span>
           <span className="text-brand-500">·</span>

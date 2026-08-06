@@ -31,6 +31,7 @@ export const SQLSERVER_TYPES: DriverTypeSpec[] = [
   { name: "smalldatetime" },
   { name: "datetimeoffset", params: "length" },
   { name: "uniqueidentifier" },
+  { name: "rowversion" },
   { name: "xml" },
   { name: "sql_variant" },
 ];
