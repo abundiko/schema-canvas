@@ -27,7 +27,7 @@ export function AIPanel() {
   const [issueFixes, setIssueFixes] = useState<Set<string>>(new Set());
 
   const diagram = useDiagramStore((s) => s.diagram);
-  const issues = tab === "issues" ? lintDiagram(diagram) : [];
+  const issues = lintDiagram(diagram);
 
   if (!open) return null;
 
@@ -36,7 +36,14 @@ export function AIPanel() {
     setProposal(null);
     setApplied(false);
     try {
-      const result = await generateSchemaFromPrompt({ data: prompt });
+      const store = useDiagramStore.getState();
+      const result = await generateSchemaFromPrompt({
+        data: {
+          prompt,
+          existing: store.diagram.tables.map((t) => t.name),
+          driver: store.diagram.driver,
+        },
+      });
       setProposal(result);
     } finally {
       setBusy(false);
@@ -49,6 +56,12 @@ export function AIPanel() {
     const diagram = store.diagram;
     const newTables: TableEntity[] = [];
     const colMap = new Map<string, { tableId: string; columnId: string }>();
+
+    for (const t of diagram.tables) {
+      for (const c of t.columns) {
+        colMap.set(`${t.name}.${c.name}`, { tableId: t.id, columnId: c.id });
+      }
+    }
 
     proposal.tables.forEach((t, idx) => {
       const tableId = createId("tbl");
@@ -92,7 +105,6 @@ export function AIPanel() {
 
     store.setDiagram({
       ...diagram,
-      driver: proposal.driver,
       tables: [...diagram.tables, ...newTables],
       relationships: [...diagram.relationships, ...relationships],
       updatedAt: new Date().toISOString(),
@@ -200,6 +212,11 @@ export function AIPanel() {
               <div                   className="rounded-lg border border-brand-200 bg-brand-50/60 p-2.5 dark:border-brand-500/30 dark:bg-brand-500/10">
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-brand-700">
                   Proposed additions
+                  {proposal.source && (
+                    <span className="ml-1.5 normal-case tracking-normal text-text-faint">
+                      · {proposal.source === "groq" ? "via Groq" : "via mock"}
+                    </span>
+                  )}
                 </p>
                 {proposal.tables.map((t) => (
                   <div key={t.name} className="mb-1.5 text-xs">
@@ -305,8 +322,8 @@ export function AIPanel() {
       </div>
 
       <div className="border-t border-border px-3 py-1.5 text-[10px] text-text-faint">
-        Mock backend — wire a real LLM into{" "}
-        <code>src/server/functions/</code> to enable production responses.
+        Schema generation is powered by Groq (llama-3.3-70b-versatile) via the Vercel AI SDK.
+        Falls back to built-in mock responses when GROQ_API_KEY is unset.
       </div>
     </div>
   );

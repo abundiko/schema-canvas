@@ -31,7 +31,7 @@ function StickyNoteNodeInner({ data, selected }: NodeProps<StickyNoteCanvasNode>
         transform: selected ? "rotate(-1.5deg)" : "rotate(0.5deg)",
       }}
     >
-      <div className="scrollbar-thin h-full w-full overflow-y-auto whitespace-pre-wrap p-2 text-zinc-800">
+      <div className="no-scrollbar h-full w-full overflow-y-auto whitespace-pre-wrap p-2 text-zinc-800">
         {note.content || " "}
       </div>
       {selected && (

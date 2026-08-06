@@ -90,6 +90,10 @@ export function useEditorShortcuts() {
         case "N":
           useDiagramStore.getState().setActiveTool("note");
           break;
+        case "p":
+        case "P":
+          useDiagramStore.getState().setActiveTool("pan");
+          break;
         case "?":
           useUiStore.getState().setShortcutsOpen(true);
           break;

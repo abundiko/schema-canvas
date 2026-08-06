@@ -482,6 +482,10 @@ function DiagramCanvasInner() {
         maxZoom={4}
         selectionOnDrag={activeTool === "select"}
         panOnDrag={activeTool === "pan" ? [0, 2] : [2]}
+        panOnScroll
+        panOnScrollSpeed={0.5}
+        zoomOnScroll={false}
+        zoomOnPinch
         panActivationKeyCode="Space"
         selectionMode={SelectionMode.Partial}
         connectionLineType={ConnectionLineType.SmoothStep}

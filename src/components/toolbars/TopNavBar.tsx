@@ -119,7 +119,7 @@ export function TopNavBar() {
   };
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-white px-3 dark:bg-panel-bg">
+    <header className="relative flex h-12 shrink-0 items-center justify-between border-b border-border bg-white px-3 dark:bg-panel-bg">
       <div className="flex items-center gap-1">
         <a href="/" className="mr-1 flex items-center gap-1.5 text-sm font-bold text-text-primary">
           <span className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-500 text-white">
@@ -242,6 +242,18 @@ export function TopNavBar() {
           Share
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={() => useUiStore.getState().setShortcutsOpen(true)}
+        className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-md px-2 py-1 text-[11px] text-text-muted hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        title="Show keyboard shortcuts"
+      >
+        <kbd className="flex h-4 min-w-4 items-center justify-center rounded border border-border bg-zinc-50 px-1 font-mono text-[10px] text-text-primary dark:bg-zinc-800">
+          ?
+        </kbd>
+        <span className="hidden sm:inline">Shortcuts</span>
+      </button>
 
       <div className="relative flex items-center gap-2">
         <ThemeSwitcher />

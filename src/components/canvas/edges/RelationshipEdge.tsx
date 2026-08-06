@@ -16,6 +16,24 @@ function targetLabel(c: Cardinality): string {
   return "∞";
 }
 
+/**
+ * html-to-image only clones computed styles onto the root <svg> of the edges
+ * layer — SVG descendants keep their attributes but lose stylesheet-applied
+ * properties. The path's stroke is CSS-only, so exported PNGs render the
+ * relationship lines invisible. Fix: resolve the live stroke color/width from
+ * the `.react-flow` container's CSS variables and set them as presentation
+ * attributes on the path (CSS still wins in the live viewport).
+ */
+function liveEdgeStroke(): { stroke: string; strokeWidth: number } {
+  const el = document.querySelector(".react-flow");
+  const cs = el ? getComputedStyle(el) : null;
+  const stroke =
+    cs?.getPropertyValue("--xy-edge-stroke-default").trim() || "#b1b1b7";
+  const strokeWidth =
+    parseFloat(cs?.getPropertyValue("--xy-edge-stroke-width-default") ?? "") || 1;
+  return { stroke, strokeWidth };
+}
+
 function RelationshipEdgeInner(props: EdgeProps) {
   const {
     sourceX,
@@ -39,6 +57,8 @@ function RelationshipEdgeInner(props: EdgeProps) {
 
   const cardinality: Cardinality = (data as RelationshipEdgeData | undefined)?.cardinality ?? "one-to-many";
 
+  const { stroke, strokeWidth } = liveEdgeStroke();
+
   const dx = targetX - sourceX;
   const dy = targetY - sourceY;
   const len = Math.hypot(dx, dy) || 1;
@@ -52,7 +72,7 @@ function RelationshipEdgeInner(props: EdgeProps) {
 
   return (
     <>
-      <BaseEdge path={path} />
+      <BaseEdge path={path} stroke={stroke} strokeWidth={strokeWidth} />
       <g style={{ pointerEvents: "none" }}>
         <circle cx={sx} cy={sy} r={7} fill="#fff" stroke="#a1a1aa" strokeWidth={1.2} />
         <text

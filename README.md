@@ -17,6 +17,30 @@ To build this application for production:
 bun --bun run build
 ```
 
+To preview the production server locally:
+
+```bash
+bun run start
+```
+
+## Deploying to Vercel
+
+This app deploys to Vercel via the [Nitro Vite plugin](https://nitro.build/guide/vite)
+(`nitro/vite`), which is registered in `vite.config.ts`. Nitro detects Vercel
+during a Vercel build and applies the `vercel` preset automatically, producing
+the Build Output API layout under `.vercel/output/`.
+
+1. Push this repo to GitHub/GitLab/Bitbucket and import it at
+   [vercel.com/new](https://vercel.com/new). Vercel auto-detects the TanStack
+   Start framework preset (or uses the `"framework": "tanstack-start"` hint in
+   `vercel.json`).
+2. Set the `GROQ_API_KEY` environment variable (used by the AI schema
+   generator in `src/server/functions/generateSchemaFromPrompt.ts`) in your
+   project's Environment Variables settings for Production/Preview/Development.
+3. Deploy. Every push to the main branch creates a production deployment.
+
+Alternatively, use the Vercel CLI: `vercel` (preview) or `vercel --prod`.
+
 ## Styling
 
 This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.

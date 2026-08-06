@@ -2,7 +2,7 @@ import { useUiStore } from "#/lib/store/uiStore";
 import { Modal } from "#/components/ui";
 
 const SHORTCUTS: Array<{ keys: string; label: string }> = [
-  { keys: "Space", label: "Pan the canvas" },
+  { keys: "Space / P", label: "Pan the canvas" },
   { keys: "T", label: "Add a table tool" },
   { keys: "N", label: "Add a sticky note tool" },
   { keys: "⌘ / Ctrl + K", label: "Open command palette" },

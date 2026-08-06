@@ -50,7 +50,7 @@ export function ViewportToolbar() {
           <MousePointer2 size={15} />
         </IconButton>
         <IconButton
-          label="Pan tool"
+          label="Pan tool (P)"
           active={activeTool === "pan"}
           onClick={() => setActiveTool(activeTool === "pan" ? "select" : "pan")}
         >
