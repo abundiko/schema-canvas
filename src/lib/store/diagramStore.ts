@@ -16,8 +16,16 @@ import type {
 } from "#/types/diagram";
 import { DEFAULT_TABLE_COLOR } from "#/lib/utils/palettes";
 import { createId } from "#/lib/utils/ids";
+import { layoutDiagram, type LayoutMode } from "#/lib/layout/autoLayout";
 
 export const MAX_TABLES = 20;
+
+interface ClipboardPayload {
+  tables: TableEntity[];
+  relationships: Relationship[];
+}
+
+let clipboard: ClipboardPayload | null = null;
 
 function now(): string {
   return new Date().toISOString();
@@ -46,7 +54,8 @@ export function isSelectionEqual(a: Selection, b: Selection): boolean {
 }
 
 function createDefaultTable(driver: Driver): TableEntity {
-  const type = driver === "postgresql" ? "serial" : "int";
+  const type =
+    driver === "postgresql" ? "serial" : driver === "mongodb" ? "string" : "int";
   return {
     id: createId("tbl"),
     name: "users",
@@ -94,6 +103,7 @@ interface DiagramStoreState {
 
   setDiagram: (diagram: Diagram) => void;
   setDiagramName: (name: string) => void;
+  setDiagramDescription: (description: string) => void;
   setDriver: (driver: Driver) => void;
 
   addTable: () => string;
@@ -101,6 +111,10 @@ interface DiagramStoreState {
   moveTable: (tableId: string, position: { x: number; y: number }) => void;
   deleteTable: (tableId: string) => void;
   assignTableToGroup: (tableId: string, groupId: string | null) => void;
+  copyTables: (tableIds: string[]) => void;
+  pasteTables: () => string[];
+  duplicateTable: (tableId: string) => void;
+  arrangeTables: (mode: LayoutMode) => void;
 
   addColumn: (tableId: string) => string;
   updateColumn: (tableId: string, columnId: string, patch: Partial<Column>) => void;
@@ -155,6 +169,8 @@ export const useDiagramStore = create<DiagramStoreState>()(
       setDiagram: (diagram) => set({ diagram: { ...diagram, updatedAt: now() } }),
       setDiagramName: (name) =>
         set((s) => ({ diagram: { ...s.diagram, name, updatedAt: now() } })),
+      setDiagramDescription: (description) =>
+        set((s) => ({ diagram: { ...s.diagram, description, updatedAt: now() } })),
       setDriver: (driver) =>
         set((s) => ({ diagram: { ...s.diagram, driver, updatedAt: now() } })),
 
@@ -162,10 +178,12 @@ export const useDiagramStore = create<DiagramStoreState>()(
         const driver = get().diagram.driver;
         if (get().diagram.tables.length >= MAX_TABLES) return "";
         const table = createDefaultTable(driver);
+        const count = get().diagram.tables.length;
+        const position = { x: count * 40, y: count * 40 };
         set((s) => ({
           diagram: {
             ...s.diagram,
-            tables: [...s.diagram.tables, table],
+            tables: [...s.diagram.tables, { ...table, position }],
             updatedAt: now(),
           },
           selection: { type: "table", tableId: table.id },
@@ -227,6 +245,109 @@ export const useDiagramStore = create<DiagramStoreState>()(
           },
         })),
 
+      copyTables: (tableIds) => {
+        const { diagram } = get();
+        const ids = new Set(tableIds);
+        const tables = diagram.tables.filter((t) => ids.has(t.id));
+        if (tables.length === 0) return;
+        const tableIdSet = new Set(tables.map((t) => t.id));
+        clipboard = {
+          tables,
+          relationships: diagram.relationships.filter(
+            (r) =>
+              tableIdSet.has(r.sourceTableId) && tableIdSet.has(r.targetTableId),
+          ),
+        };
+      },
+
+      pasteTables: () => {
+        const payload = clipboard;
+        const current = get().diagram;
+        if (!payload || payload.tables.length === 0) return [];
+
+        const tableIdMap = new Map<string, string>();
+        const columnIdMap = new Map<string, string>();
+
+        const available = Math.max(0, MAX_TABLES - current.tables.length);
+        const tablesToAdd = payload.tables.slice(0, available);
+
+        const newTables = tablesToAdd.map((t) => {
+          const newTableId = createId("tbl");
+          tableIdMap.set(t.id, newTableId);
+          const columns = t.columns.map((c) => {
+            const newColId = createId("col");
+            columnIdMap.set(`${t.id}:${c.id}`, newColId);
+            return { ...c, id: newColId };
+          });
+          const indexes = t.indexes.map((ix) => ({
+            ...ix,
+            id: createId("idx"),
+            columnIds: ix.columnIds.map(
+              (cid) => columnIdMap.get(`${t.id}:${cid}`) ?? cid,
+            ),
+          }));
+          return {
+            ...t,
+            id: newTableId,
+            position: { x: t.position.x + 40, y: t.position.y + 40 },
+            columns,
+            indexes,
+          };
+        });
+
+        const relationships = payload.relationships
+          .map((r) => {
+            const st = tableIdMap.get(r.sourceTableId);
+            const tt = tableIdMap.get(r.targetTableId);
+            const sc = columnIdMap.get(`${r.sourceTableId}:${r.sourceColumnId}`);
+            const tc = columnIdMap.get(`${r.targetTableId}:${r.targetColumnId}`);
+            if (!st || !tt || !sc || !tc) return null;
+            return {
+              ...r,
+              id: createId("rel"),
+              sourceTableId: st,
+              sourceColumnId: sc,
+              targetTableId: tt,
+              targetColumnId: tc,
+            };
+          })
+          .filter((r): r is Relationship => !!r);
+
+        set((s) => ({
+          diagram: {
+            ...s.diagram,
+            tables: [...s.diagram.tables, ...newTables],
+            relationships: [...s.diagram.relationships, ...relationships],
+            updatedAt: now(),
+          },
+          selection:
+            newTables.length === 1
+              ? { type: "table", tableId: newTables[0].id }
+              : { type: "tables", tableIds: newTables.map((t) => t.id) },
+        }));
+        return newTables.map((t) => t.id);
+      },
+
+      duplicateTable: (tableId) => {
+        get().copyTables([tableId]);
+        get().pasteTables();
+      },
+
+      arrangeTables: (mode) =>
+        set((s) => {
+          const positions = layoutDiagram(s.diagram, mode);
+          return {
+            diagram: {
+              ...s.diagram,
+              tables: s.diagram.tables.map((t) => ({
+                ...t,
+                position: positions.get(t.id) ?? t.position,
+              })),
+              updatedAt: now(),
+            },
+          };
+        }),
+
       addColumn: (tableId) => {
         const col: Column = {
           id: createId("col"),
@@ -246,7 +367,16 @@ export const useDiagramStore = create<DiagramStoreState>()(
                 ...t,
                 columns: [
                   ...t.columns,
-                  { ...col, type: s.diagram.driver === "postgresql" ? "integer" : "int", order: maxOrder + 1 },
+                  {
+                    ...col,
+                    type:
+                      s.diagram.driver === "postgresql"
+                        ? "integer"
+                        : s.diagram.driver === "mongodb"
+                          ? "string"
+                          : "int",
+                    order: maxOrder + 1,
+                  },
                 ],
               };
             }),

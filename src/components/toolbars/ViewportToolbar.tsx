@@ -4,10 +4,12 @@ import {
   Fullscreen,
   Grid3x3,
   Hand,
+  LayoutGrid,
   Maximize,
   MousePointer2,
   MoreHorizontal,
   Redo2,
+  Shuffle,
   Undo2,
   ZoomIn,
   ZoomOut,
@@ -22,6 +24,7 @@ import { cn } from "#/lib/utils/cn";
 export function ViewportToolbar() {
   const activeTool = useDiagramStore((s) => s.activeTool);
   const setActiveTool = useDiagramStore((s) => s.setActiveTool);
+  const arrangeTables = useDiagramStore((s) => s.arrangeTables);
   const gridVisible = useUiStore((s) => s.gridVisible);
   const setGridVisible = useUiStore((s) => s.setGridVisible);
 
@@ -56,6 +59,12 @@ export function ViewportToolbar() {
         <div className="mx-0.5 h-4 w-px bg-border" />
         <IconButton label="Fit view" onClick={() => emitCanvasEvent({ type: "fit-view" })}>
           <Frame size={15} />
+        </IconButton>
+        <IconButton
+          label="Arrange tables (grid)"
+          onClick={() => arrangeTables("grid")}
+        >
+          <LayoutGrid size={15} />
         </IconButton>
         <IconButton
           label="Undo (Ctrl+Z)"
@@ -109,6 +118,14 @@ export function ViewportToolbar() {
                     {gridVisible ? "on" : "off"}
                   </span>
                 </span>
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  arrangeTables("force");
+                  close();
+                }}
+              >
+                <Shuffle size={14} /> Arrange (force)
               </MenuItem>
               <MenuItem
                 onClick={() => {

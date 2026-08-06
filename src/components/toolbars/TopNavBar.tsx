@@ -1,8 +1,9 @@
-import { Check, ChevronDown, Database, FileJson, FileText, Image, Monitor, Moon, Plus, Save, Sun } from "lucide-react";
+import { Check, ChevronDown, Database, FileCode2, FileJson, FileText, Image, Monitor, Moon, Plus, Save, Sun } from "lucide-react";
 
 import { useDiagramStore, createBlankDiagram } from "#/lib/store/diagramStore";
 import { resolveTheme, useUiStore, type ThemeMode } from "#/lib/store/uiStore";
-import { exportSql, exportImage, exportDiagramJson } from "#/lib/export/exportActions";
+import { exportSql, exportDbml, exportTs, exportMongoSchema, exportImage, exportDiagramJson } from "#/lib/export/exportActions";
+import { generateTableDdl } from "#/lib/ddl/generateDdl";
 import { DRIVERS, getDriver } from "#/lib/drivers";
 import { saveDiagram } from "#/lib/persistence/autosave";
 import { Dropdown, MenuItem } from "#/components/ui";
@@ -98,6 +99,25 @@ export function TopNavBar() {
     );
   };
 
+  const selection = useDiagramStore.getState().selection;
+  const selectedTable =
+    selection.type === "table"
+      ? useDiagramStore.getState().diagram.tables.find(
+          (t) => t.id === selection.tableId,
+        )
+      : undefined;
+
+  const copyTableSql = async () => {
+    if (!selectedTable) return;
+    const sql = generateTableDdl(useDiagramStore.getState().diagram, selectedTable.id);
+    try {
+      await navigator.clipboard.writeText(sql);
+      showNotice(`Copied CREATE TABLE for "${selectedTable.name}" to clipboard.`);
+    } catch {
+      showNotice("Could not access the clipboard.");
+    }
+  };
+
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-white px-3 dark:bg-panel-bg">
       <div className="flex items-center gap-1">
@@ -138,14 +158,49 @@ export function TopNavBar() {
               >
                 <FileText size={14} /> Import SQL…
               </MenuItem>
-              <div className="my-0.5 border-t border-border" />
               <MenuItem
                 onClick={() => {
                   close();
-                  exportSql(useDiagramStore.getState().diagram);
+                  openDialog("importDbml");
                 }}
               >
-                <FileText size={14} /> Export ▸ SQL
+                <FileCode2 size={14} /> Import DBML…
+              </MenuItem>
+              <div className="my-0.5 border-t border-border" />
+              {diagram.driver === "mongodb" ? (
+                <MenuItem
+                  onClick={() => {
+                    close();
+                    exportMongoSchema(useDiagramStore.getState().diagram);
+                  }}
+                >
+                  <FileText size={14} /> Export ▸ MongoDB schema (.json)
+                </MenuItem>
+              ) : (
+                <MenuItem
+                  onClick={() => {
+                    close();
+                    exportSql(useDiagramStore.getState().diagram);
+                  }}
+                >
+                  <FileText size={14} /> Export ▸ SQL
+                </MenuItem>
+              )}
+              <MenuItem
+                onClick={() => {
+                  close();
+                  exportDbml(useDiagramStore.getState().diagram);
+                }}
+              >
+                <FileCode2 size={14} /> Export ▸ DBML
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  close();
+                  exportTs(useDiagramStore.getState().diagram);
+                }}
+              >
+                <FileCode2 size={14} /> Export ▸ TypeScript
               </MenuItem>
               <MenuItem
                 onClick={() => {
@@ -163,6 +218,14 @@ export function TopNavBar() {
               >
                 <FileJson size={14} /> Export ▸ JSON
               </MenuItem>
+              {selectedTable && (
+                <>
+                  <div className="my-0.5 border-t border-border" />
+                  <MenuItem onClick={() => { close(); void copyTableSql(); }}>
+                    <FileText size={14} /> Copy “{selectedTable.name}” as SQL
+                  </MenuItem>
+                </>
+              )}
               <div className="my-0.5 border-t border-border" />
               <MenuItem onClick={() => { close(); void saveNow(); }}>
                 <Save size={14} /> Save
@@ -185,6 +248,7 @@ export function TopNavBar() {
 
         <Dropdown
           width="w-44"
+          align="right"
           trigger={({ toggle }) => (
             <button
               type="button"

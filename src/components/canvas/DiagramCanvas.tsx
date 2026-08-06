@@ -9,7 +9,6 @@ import {
   useEdgesState,
   useNodesState,
   useReactFlow,
-  useStoreApi,
   SelectionMode,
   ConnectionLineType,
   type Connection,
@@ -21,10 +20,9 @@ import {
   type OnSelectionChangeParams,
 } from "@xyflow/react";
 
-import { useDiagramStore } from "#/lib/store/diagramStore";
-import { useUiStore } from "#/lib/store/uiStore";
+import { isSelectionEqual, useDiagramStore } from "#/lib/store/diagramStore";import { useUiStore } from "#/lib/store/uiStore";
 import { onCanvasEvent } from "#/lib/utils/canvasEvents";
-import type { Diagram, Group, StickyNote } from "#/types/diagram";
+import type { Diagram, Group, Selection, StickyNote } from "#/types/diagram";
 import { TableNode } from "./nodes/TableNode";
 import { GroupNode } from "./nodes/GroupNode";
 import { StickyNoteNode } from "./nodes/StickyNoteNode";
@@ -75,6 +73,7 @@ interface GroupDragState {
 function DiagramCanvasInner() {
   const diagram = useDiagramStore((s) => s.diagram);
   const activeTool = useDiagramStore((s) => s.activeTool);
+  const selection = useDiagramStore((s) => s.selection);
   const setSelection = useDiagramStore((s) => s.setSelection);
 
   const [nodes, setNodes] = useNodesState<Node>([]);
@@ -83,6 +82,7 @@ function DiagramCanvasInner() {
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
   const busyRef = useRef(false);
   const suppressPaneClickRef = useRef(false);
+  const lastPushedSelectionRef = useRef<Selection | null>(null);
   const groupDragRef = useRef<GroupDragState | null>(null);
   const lastDrawRef = useRef<DrawRect | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -164,6 +164,7 @@ function DiagramCanvasInner() {
         selectable: true,
         draggable: true,
         dragHandle: ".group-drag-handle",
+        selected: selection.type === "group" && selection.groupId === g.id,
       });
     }
     for (const t of diagram.tables) {
@@ -177,6 +178,9 @@ function DiagramCanvasInner() {
           autoFocusName: autoFocusId === t.id,
         },
         zIndex: 1,
+        selected:
+          (selection.type === "table" && selection.tableId === t.id) ||
+          (selection.type === "tables" && selection.tableIds.includes(t.id)),
       });
     }
     for (const n of diagram.notes) {
@@ -187,6 +191,7 @@ function DiagramCanvasInner() {
         data: { note: n, onResizeCommit: handleNoteResizeCommit },
         style: { width: n.size.width, height: n.size.height },
         zIndex: 1,
+        selected: selection.type === "note" && selection.noteId === n.id,
       });
     }
 
@@ -200,35 +205,29 @@ function DiagramCanvasInner() {
         sourceHandle: rel.sourceColumnId,
         targetHandle: rel.targetColumnId,
         data: { cardinality: rel.cardinality },
+        selected: selection.type === "relationship" && selection.relationshipId === rel.id,
       });
     }
     return { nodes, edges };
-  }, [diagram, autoFocusId, handleTableRename, handleGroupResizeCommit, handleNoteResizeCommit]);
+  }, [diagram, autoFocusId, selection, handleTableRename, handleGroupResizeCommit, handleNoteResizeCommit]);
 
   /* ---------------- sync store → RF (skipped mid-drag) ---------------- */
-  const storeApi = useStoreApi();
   useEffect(() => {
     if (busyRef.current) return;
-    const { nodeLookup, edgeLookup } = storeApi.getState();
-    const selectedNodeIds = new Set(
-      [...nodeLookup.values()].filter((n) => n.selected).map((n) => n.id),
-    );
-    const selectedEdgeIds = new Set(
-      [...edgeLookup.values()].filter((e) => e.selected).map((e) => e.id),
-    );
-    const nodesWithSelection = desired.nodes.map((n) =>
-      selectedNodeIds.has(n.id) ? { ...n, selected: true } : n,
-    );
-    const edgesWithSelection = desired.edges.map((e) =>
-      selectedEdgeIds.has(e.id) ? { ...e, selected: true } : e,
-    );
-    setNodes(nodesWithSelection);
-    setEdges(edgesWithSelection);
-  }, [desired, setNodes, setEdges]);
+    // The zustand `selection` is the single source of truth (kept in sync with
+    // canvas clicks via onSelectionChange / onPaneClick), so `desired` already
+    // carries the `selected` flags — including selections made from the sidebar.
+    // Record what we pushed so handleSelectionChange can ignore RF's echo of it.
+    lastPushedSelectionRef.current = selection;
+    setNodes(desired.nodes);
+    setEdges(desired.edges);
+  }, [desired, setNodes, setEdges, selection]);
 
   /* ---------------- user changes ---------------- */
   const handleNodesChange = useCallback(
-    (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    (changes: NodeChange[]) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+    },
     [setNodes],
   );
   const handleEdgesChange = useCallback(
@@ -238,21 +237,29 @@ function DiagramCanvasInner() {
 
   const handleSelectionChange = useCallback(
     ({ nodes: selNodes, edges: selEdges }: OnSelectionChangeParams) => {
+      let next: Selection | null = null;
       if (selEdges.length === 1 && selNodes.length === 0) {
-        setSelection({ type: "relationship", relationshipId: selEdges[0].id });
+        next = { type: "relationship", relationshipId: selEdges[0].id };
       } else if (selNodes.length === 1) {
         const id = selNodes[0].id;
-        if (isTable(id)) setSelection({ type: "table", tableId: id });
-        else if (isGroup(id)) setSelection({ type: "group", groupId: id });
-        else if (isNote(id)) setSelection({ type: "note", noteId: id });
-        else setSelection({ type: "none" });
+        if (isTable(id)) next = { type: "table", tableId: id };
+        else if (isGroup(id)) next = { type: "group", groupId: id };
+        else if (isNote(id)) next = { type: "note", noteId: id };
+        else next = { type: "none" };
       } else if (selNodes.length > 1) {
         if (selNodes.every((n) => isTable(n.id))) {
-          setSelection({ type: "tables", tableIds: selNodes.map((n) => n.id) });
+          next = { type: "tables", tableIds: selNodes.map((n) => n.id) };
         } else {
-          setSelection({ type: "none" });
+          next = { type: "none" };
         }
       }
+      if (!next) return;
+      // Ignore the echo of a selection we just pushed into RF via the sync
+      // effect; otherwise store→RF→onSelectionChange→store loops forever.
+      if (lastPushedSelectionRef.current && isSelectionEqual(lastPushedSelectionRef.current, next)) {
+        return;
+      }
+      setSelection(next);
     },
     [isTable, isGroup, isNote, setSelection],
   );

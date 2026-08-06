@@ -220,7 +220,7 @@ export function Dropdown({
       {open && (
         <div
           className={cn(
-            "absolute top-full z-50 mt-1 rounded-lg border border-border bg-white p-1 shadow-floating dark:bg-zinc-900",
+            "absolute top-full z-[80] mt-1 rounded-lg border border-border bg-white p-1 shadow-floating dark:bg-zinc-900",
             align === "left" ? "left-0" : "right-0",
             width,
           )}

@@ -1,8 +1,9 @@
-export type Driver = "mysql" | "postgresql" | "sqlserver" | "mariadb";
+export type Driver = "mysql" | "postgresql" | "sqlserver" | "mariadb" | "mongodb";
 
 export interface Diagram {
   id: string;
   name: string;
+  description?: string;
   driver: Driver;
   tables: TableEntity[];
   relationships: Relationship[];
@@ -50,6 +51,13 @@ export interface CompositeIndex {
 
 export type Cardinality = "one-to-one" | "one-to-many" | "many-to-many";
 
+export type ReferentialAction =
+  | "cascade"
+  | "restrict"
+  | "set null"
+  | "no action"
+  | "set default";
+
 export interface Relationship {
   id: string;
   sourceTableId: string;
@@ -57,6 +65,8 @@ export interface Relationship {
   targetTableId: string;
   targetColumnId: string;
   cardinality: Cardinality;
+  onDelete?: ReferentialAction;
+  onUpdate?: ReferentialAction;
 }
 
 export interface Group {

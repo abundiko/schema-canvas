@@ -27,7 +27,7 @@ export function ColumnAttributesPopover({
 
   return (
     <Dropdown
-      align="left"
+      align="right"
       width="w-72"
       trigger={({ toggle }) => (
         <button

@@ -1,6 +1,7 @@
 import { useDiagramStore } from "#/lib/store/diagramStore";
 import { useSelectedGroup, useSelectedNote, useSelectedRelationship, useSelectedTable } from "#/lib/store/selectors";
 import { TableList } from "./TableList";
+import { DiagramMeta } from "./DiagramMeta";
 import { TableEditor } from "./TableEditor";
 import { GroupEditor } from "./GroupEditor";
 import { StickyNoteEditor } from "./StickyNoteEditor";
@@ -16,7 +17,12 @@ export function InspectorPanel() {
   return (
     <div className="flex h-full w-[316px] flex-col border-r border-border bg-panel-bg shadow-panel">
       <div className="scrollbar-thin flex-1 overflow-y-auto">
-        {selection.type === "none" && <TableList />}
+        {selection.type === "none" && (
+          <>
+            <DiagramMeta />
+            <TableList />
+          </>
+        )}
         {selection.type === "table" && table && (
           <div className="p-3">
             <TableEditor table={table} />

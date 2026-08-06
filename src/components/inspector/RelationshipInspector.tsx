@@ -2,6 +2,7 @@ import { Trash2 } from "lucide-react";
 
 import { useDiagramStore } from "#/lib/store/diagramStore";
 import type { Relationship } from "#/types/diagram";
+import { REFERENTIAL_ACTIONS } from "#/lib/utils/referentialActions";
 import { Button, Field, Select } from "#/components/ui";
 
 export function RelationshipInspector({ relationship }: { relationship: Relationship }) {
@@ -32,6 +33,33 @@ export function RelationshipInspector({ relationship }: { relationship: Relation
           ]}
         />
       </Field>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="ON DELETE">
+          <Select
+            ariaLabel="On delete"
+            value={relationship.onDelete ?? "none"}
+            onChange={(v) =>
+              updateRelationship(relationship.id, {
+                onDelete: v === "none" ? undefined : (v as NonNullable<Relationship["onDelete"]>),
+              })
+            }
+            options={REFERENTIAL_ACTIONS}
+          />
+        </Field>
+        <Field label="ON UPDATE">
+          <Select
+            ariaLabel="On update"
+            value={relationship.onUpdate ?? "none"}
+            onChange={(v) =>
+              updateRelationship(relationship.id, {
+                onUpdate: v === "none" ? undefined : (v as NonNullable<Relationship["onUpdate"]>),
+              })
+            }
+            options={REFERENTIAL_ACTIONS}
+          />
+        </Field>
+      </div>
 
       <div className="rounded-md border border-border bg-zinc-50 p-2 text-xs text-text-muted dark:bg-zinc-800/60">
         <div className="flex items-center gap-1.5">

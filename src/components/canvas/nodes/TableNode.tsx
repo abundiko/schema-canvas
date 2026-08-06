@@ -91,7 +91,7 @@ function TableNodeInner({ data, selected }: NodeProps<TableNodeType>) {
               }
               e.stopPropagation();
             }}
-            className="h-5 w-full rounded bg-white/90 px-1 text-center text-xs font-semibold text-text-primary outline-none ring-1 ring-brand-500"
+            className="h-5 w-full rounded bg-white/90 px-1 text-center text-xs font-semibold text-text-primary outline-none ring-1 ring-brand-500 dark:bg-zinc-900/90"
           />
         ) : (
           <span className="flex items-center gap-1 truncate text-xs font-semibold text-white drop-shadow-sm">

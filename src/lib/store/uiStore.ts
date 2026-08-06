@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type DialogKind = "none" | "import" | "export" | "share";
+export type DialogKind = "none" | "import" | "importDbml" | "export" | "share";
 
 export type ThemeMode = "light" | "dark" | "system";
 
@@ -25,6 +25,8 @@ interface UiState {
   zoom: number;
   gridVisible: boolean;
   theme: ThemeMode;
+  commandPaletteOpen: boolean;
+  shortcutsOpen: boolean;
   openDialog: (dialog: DialogKind) => void;
   closeDialog: () => void;
   setAiOpen: (open: boolean) => void;
@@ -32,6 +34,8 @@ interface UiState {
   setZoom: (zoom: number) => void;
   setGridVisible: (visible: boolean) => void;
   setTheme: (theme: ThemeMode) => void;
+  setCommandPaletteOpen: (open: boolean) => void;
+  setShortcutsOpen: (open: boolean) => void;
 }
 
 let noticeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -43,6 +47,8 @@ export const useUiStore = create<UiState>()((set) => ({
   zoom: 1,
   gridVisible: true,
   theme: loadTheme(),
+  commandPaletteOpen: false,
+  shortcutsOpen: false,
   openDialog: (dialog) => set({ dialog }),
   closeDialog: () => set({ dialog: "none" }),
   setAiOpen: (aiOpen) => set({ aiOpen }),
@@ -61,6 +67,8 @@ export const useUiStore = create<UiState>()((set) => ({
     }
     set({ theme });
   },
+  setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
+  setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
 }));
 
 export function resolveTheme(mode: ThemeMode): "light" | "dark" {

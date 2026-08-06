@@ -1,6 +1,7 @@
 import type { Column, CompositeIndex, Diagram, TableEntity } from "#/types/diagram";
 import { getDriver } from "#/lib/drivers";
 import { formatDefault } from "#/lib/utils/defaults";
+import { REFERENTIAL_ACTION_LABEL } from "#/lib/utils/referentialActions";
 
 const PG_SERIAL: Record<string, string> = {
   smallint: "smallserial",
@@ -8,6 +9,12 @@ const PG_SERIAL: Record<string, string> = {
   integer: "serial",
   bigint: "bigserial",
 };
+
+export interface DdlOptions {
+  dropTable?: boolean;
+  ifNotExists?: boolean;
+  mysqlEngine?: boolean;
+}
 
 function quote(diagram: Diagram, name: string): string {
   return getDriver(diagram.driver).quote.open + name + getDriver(diagram.driver).quote.close;
@@ -133,25 +140,32 @@ function renderCompositeIndexes(
   return { inline, separate };
 }
 
-export function generateDdl(diagram: Diagram): string {
-  const out: string[] = [];
+function renderCreateTable(diagram: Diagram, table: TableEntity, options: DdlOptions): string {
+  const { driver } = diagram;
+  const cols = [...table.columns].sort((a, b) => a.order - b.order);
+  const lines = cols.map((c) => renderColumn(diagram, c));
+  const { inline, separate } = renderCompositeIndexes(diagram, table);
+  lines.push(...inline);
 
-  for (const table of diagram.tables) {
-    const cols = [...table.columns].sort((a, b) => a.order - b.order);
-    const lines = cols.map((c) => renderColumn(diagram, c));
-    const { inline, separate } = renderCompositeIndexes(diagram, table);
-    lines.push(...inline);
+  const createPrefix = options.ifNotExists ? "CREATE TABLE IF NOT EXISTS " : "CREATE TABLE ";
+  const out = [
+    createPrefix + quote(diagram, table.name) + `(${lines.length > 0 ? "\n    " : ""}${lines.join(
+      ",\n    ",
+    )}\n)`,
+  ];
 
-    out.push(
-      `CREATE TABLE ${quote(diagram, table.name)}(${lines.length > 0 ? "\n    " : ""}${lines.join(
-        ",\n    ",
-      )}\n);`,
-    );
-    out.push(...separate);
+  if (options.mysqlEngine && (driver === "mysql" || driver === "mariadb")) {
+    out[0] += "\nENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
   }
+  out[0] += ";";
 
-  // foreign keys
+  return [out[0], ...separate].join("\n");
+}
+
+function renderForeignKeys(diagram: Diagram, tableIds?: Set<string>): string[] {
+  const out: string[] = [];
   for (const rel of diagram.relationships) {
+    if (tableIds && !tableIds.has(rel.sourceTableId)) continue;
     const src = diagram.tables.find((t) => t.id === rel.sourceTableId);
     const tgt = diagram.tables.find((t) => t.id === rel.targetTableId);
     if (!src || !tgt) continue;
@@ -160,16 +174,55 @@ export function generateDdl(diagram: Diagram): string {
     if (!srcCol || !tgtCol) continue;
 
     const constraintName = `${src.name}_${srcCol.name}_foreign`;
-    out.push(
-      `ALTER TABLE ${quote(diagram, src.name)} ADD CONSTRAINT ${quote(
-        diagram,
-        constraintName,
-      )}\nFOREIGN KEY(${quote(diagram, srcCol.name)}) REFERENCES ${quote(
-        diagram,
-        tgt.name,
-      )}(${quote(diagram, tgtCol.name)});`,
-    );
+    let fk = `ALTER TABLE ${quote(diagram, src.name)} ADD CONSTRAINT ${quote(
+      diagram,
+      constraintName,
+    )}\nFOREIGN KEY(${quote(diagram, srcCol.name)}) REFERENCES ${quote(
+      diagram,
+      tgt.name,
+    )}(${quote(diagram, tgtCol.name)})`;
+
+    const actions: string[] = [];
+    if (rel.onDelete) actions.push(`ON DELETE ${REFERENTIAL_ACTION_LABEL[rel.onDelete]}`);
+    if (rel.onUpdate) actions.push(`ON UPDATE ${REFERENTIAL_ACTION_LABEL[rel.onUpdate]}`);
+    if (actions.length > 0) fk += `\n${actions.join(" ")}`;
+    fk += ";";
+    out.push(fk);
   }
+  return out;
+}
+
+export function generateDdl(diagram: Diagram, options: DdlOptions = {}): string {
+  if (diagram.driver === "mongodb") {
+    return "-- MongoDB collections are documents, not SQL tables.\n-- Use the TypeScript or MongoDB JSON schema export instead.";
+  }
+
+  const out: string[] = [];
+
+  for (const table of diagram.tables) {
+    if (options.dropTable) {
+      out.push(`DROP TABLE IF EXISTS ${quote(diagram, table.name)};`);
+    }
+    out.push(renderCreateTable(diagram, table, options));
+  }
+
+  out.push(...renderForeignKeys(diagram));
+
+  return out.join("\n");
+}
+
+export function generateTableDdl(diagram: Diagram, tableId: string, options: DdlOptions = {}): string {
+  const table = diagram.tables.find((t) => t.id === tableId);
+  if (!table) return "";
+  const out: string[] = [];
+
+  if (options.dropTable) {
+    out.push(`DROP TABLE IF EXISTS ${quote(diagram, table.name)};`);
+  }
+  out.push(renderCreateTable(diagram, table, options));
+
+  const involved = new Set([table.id]);
+  out.push(...renderForeignKeys(diagram, involved));
 
   return out.join("\n");
 }

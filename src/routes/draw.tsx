@@ -16,8 +16,11 @@ import { ViewportToolbar } from "#/components/toolbars/ViewportToolbar";
 import { AIPanel } from "#/components/toolbars/AIPanel";
 import { InspectorPanel } from "#/components/inspector/InspectorPanel";
 import { ImportDdlDialog } from "#/components/dialogs/ImportDdlDialog";
+import { ImportDbmlDialog } from "#/components/dialogs/ImportDbmlDialog";
 import { ExportDialog } from "#/components/dialogs/ExportDialog";
 import { ShareDialog } from "#/components/dialogs/ShareDialog";
+import { CommandPalette } from "#/components/dialogs/CommandPalette";
+import { ShortcutsDialog } from "#/components/dialogs/ShortcutsDialog";
 
 export const Route = createFileRoute("/draw")({
   component: DrawPage,
@@ -91,8 +94,11 @@ function DrawPage() {
       )}
 
       <ImportDdlDialog />
+      <ImportDbmlDialog />
       <ExportDialog />
       <ShareDialog />
+      <CommandPalette />
+      <ShortcutsDialog />
     </div>
   );
 }

@@ -5,12 +5,13 @@ import { useDiagramStore } from "#/lib/store/diagramStore";
 import { useUiStore } from "#/lib/store/uiStore";
 import { generateSchemaFromPrompt, type AiGenerateResult } from "#/server/functions/generateSchemaFromPrompt";
 import { reviewSchema, type ReviewSuggestion } from "#/server/functions/reviewSchema";
+import { lintDiagram, severityOrder } from "#/lib/lint/lint";
 import { createId } from "#/lib/utils/ids";
 import type { Column, Relationship, TableEntity } from "#/types/diagram";
 import { Button } from "#/components/ui";
 import { cn } from "#/lib/utils/cn";
 
-type Tab = "generate" | "review";
+type Tab = "generate" | "review" | "issues";
 
 export function AIPanel() {
   const open = useUiStore((s) => s.aiOpen);
@@ -23,6 +24,10 @@ export function AIPanel() {
   const [suggestions, setSuggestions] = useState<ReviewSuggestion[] | null>(null);
   const [appliedFixes, setAppliedFixes] = useState<Set<string>>(new Set());
   const [reviewBusy, setReviewBusy] = useState(false);
+  const [issueFixes, setIssueFixes] = useState<Set<string>>(new Set());
+
+  const diagram = useDiagramStore((s) => s.diagram);
+  const issues = tab === "issues" ? lintDiagram(diagram) : [];
 
   if (!open) return null;
 
@@ -120,6 +125,18 @@ export function AIPanel() {
     setAppliedFixes((prev) => new Set(prev).add(s.id));
   };
 
+  const applyLintFix = (id: string) => {
+    const issue = issues.find((i) => i.id === id);
+    if (!issue?.fix || issueFixes.has(id)) return;
+    const store = useDiagramStore.getState();
+    if (issue.fix.type === "addIndex" && issue.fix.columnId) {
+      store.updateColumn(issue.fix.tableId, issue.fix.columnId, { keyType: "index" });
+    } else if (issue.fix.type === "primaryKey" && issue.fix.columnId) {
+      store.updateColumn(issue.fix.tableId, issue.fix.columnId, { keyType: "primary" });
+    }
+    setIssueFixes((prev) => new Set(prev).add(id));
+  };
+
   return (
     <div className="absolute right-3 top-14 z-30 flex h-[min(560px,calc(100%-72px))] w-80 flex-col overflow-hidden rounded-xl border border-border bg-white shadow-floating dark:bg-zinc-900">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
@@ -137,7 +154,7 @@ export function AIPanel() {
       </div>
 
       <div className="flex gap-1 border-b border-border px-2 py-1.5">
-        {(["generate", "review"] as Tab[]).map((t) => (
+        {(["generate", "review", "issues"] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -150,6 +167,11 @@ export function AIPanel() {
             )}
           >
             {t}
+            {t === "issues" && issues.length > 0 && (
+              <span className="ml-1 rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-white">
+                {issues.length}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -202,7 +224,7 @@ export function AIPanel() {
               </p>
             )}
           </>
-        ) : (
+        ) : tab === "review" ? (
           <>
             <Button variant="subtle" onClick={() => void runReview()} disabled={reviewBusy} className="w-full">
               {reviewBusy ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
@@ -239,6 +261,45 @@ export function AIPanel() {
                   )}
                 </div>
               ))}
+          </>
+        ) : (
+          <>
+            {issues.length === 0 ? (
+              <div className="rounded-lg border border-border bg-zinc-50/70 p-3 text-center text-xs text-text-muted dark:bg-zinc-800/60">
+                No issues found. Your schema looks clean.
+              </div>
+            ) : (
+              [...issues].sort((a, b) => severityOrder(a.severity) - severityOrder(b.severity)).map((s) => (
+                <div
+                  key={s.id}
+                  className="rounded-lg border border-border bg-zinc-50/70 p-2.5 dark:bg-zinc-800/60"
+                >
+                  <div className="flex items-start gap-2">
+                    <span
+                      className={cn(
+                        "mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full",
+                        s.severity === "error" && "bg-red-500",
+                        s.severity === "warning" && "bg-amber-500",
+                        s.severity === "info" && "bg-brand-500",
+                      )}
+                    />
+                    <p className="flex-1 text-xs text-text-primary">{s.message}</p>
+                  </div>
+                  {s.fix && !issueFixes.has(s.id) && (
+                    <button
+                      type="button"
+                      onClick={() => applyLintFix(s.id)}
+                      className="mt-1.5 ml-3.5 rounded bg-brand-500 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-brand-600"
+                    >
+                      Apply fix
+                    </button>
+                  )}
+                  {issueFixes.has(s.id) && (
+                    <p className="mt-1.5 ml-3.5 text-[11px] text-accent-teal">Applied ✓</p>
+                  )}
+                </div>
+              ))
+            )}
           </>
         )}
       </div>

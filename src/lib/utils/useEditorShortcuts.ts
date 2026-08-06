@@ -4,6 +4,7 @@ import { useDiagramStore } from "#/lib/store/diagramStore";
 import { useUiStore } from "#/lib/store/uiStore";
 import { emitCanvasEvent } from "#/lib/utils/canvasEvents";
 import { saveDiagram } from "#/lib/persistence/autosave";
+import { copySelection } from "#/lib/utils/commands";
 
 function isEditable(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -37,6 +38,28 @@ export function useEditorShortcuts() {
           useUiStore.getState().showNotice("Diagram saved to this browser.");
           return;
         }
+        if (e.key.toLowerCase() === "k") {
+          e.preventDefault();
+          const ui = useUiStore.getState();
+          ui.setCommandPaletteOpen(!ui.commandPaletteOpen);
+          return;
+        }
+        if (e.key.toLowerCase() === "c" && !isEditable(target)) {
+          e.preventDefault();
+          copySelection();
+          return;
+        }
+        if (e.key.toLowerCase() === "v" && !isEditable(target)) {
+          e.preventDefault();
+          useDiagramStore.getState().pasteTables();
+          return;
+        }
+        if (e.key.toLowerCase() === "d" && !isEditable(target)) {
+          e.preventDefault();
+          copySelection();
+          useDiagramStore.getState().pasteTables();
+          return;
+        }
         if (e.key === "Enter") {
           const sel = useDiagramStore.getState().selection;
           if (sel.type === "table") {
@@ -66,6 +89,9 @@ export function useEditorShortcuts() {
         case "n":
         case "N":
           useDiagramStore.getState().setActiveTool("note");
+          break;
+        case "?":
+          useUiStore.getState().setShortcutsOpen(true);
           break;
         case "Delete":
         case "Backspace": {
