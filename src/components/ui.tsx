@@ -289,6 +289,7 @@ export function Modal({
         aria-label={title}
         className={cn(
           "relative w-full rounded-xl bg-white shadow-floating dark:bg-zinc-900",
+          "max-h-[calc(100vh-5rem)] overflow-y-auto",
           width,
         )}
       >

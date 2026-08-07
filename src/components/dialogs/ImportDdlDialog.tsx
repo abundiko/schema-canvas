@@ -250,12 +250,24 @@ export function ImportDdlDialog() {
               {result.relationships} relationship
               {result.relationships === 1 ? "" : "s"}
             </div>
-            {result.warnings.map((w, i) => (
-              <div key={i} className="flex items-start gap-1.5 text-amber-700 dark:text-amber-400">
-                <span className="mt-0.5 shrink-0">•</span>
-                <span>{w}</span>
+            {result.warnings.length > 0 && (
+              <div className="max-h-44 overflow-y-auto pr-1">
+                <div className="mb-1 text-amber-700 dark:text-amber-400">
+                  {result.warnings.length} warning{result.warnings.length === 1 ? "" : "s"}:
+                </div>
+                {result.warnings.slice(0, 40).map((w, i) => (
+                  <div key={i} className="flex items-start gap-1.5 text-amber-700 dark:text-amber-400">
+                    <span className="mt-0.5 shrink-0">•</span>
+                    <span>{w}</span>
+                  </div>
+                ))}
+                {result.warnings.length > 40 && (
+                  <div className="mt-1 text-text-muted">
+                    …and {result.warnings.length - 40} more
+                  </div>
+                )}
               </div>
-            ))}
+            )}
           </div>
         )}
 

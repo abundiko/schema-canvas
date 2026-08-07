@@ -85,6 +85,8 @@ function DiagramCanvasInner() {
   const lastPushedSelectionRef = useRef<Selection | null>(null);
   const groupDragRef = useRef<GroupDragState | null>(null);
   const lastDrawRef = useRef<DrawRect | null>(null);
+  const isSelectingRef = useRef(false);
+  const pendingSelectionRef = useRef<Selection | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition, zoomIn, zoomOut, setViewport, fitView, getViewport } =
     useReactFlow();
@@ -254,6 +256,14 @@ function DiagramCanvasInner() {
         }
       }
       if (!next) return;
+      // During a marquee selection drag React Flow fires this on every
+      // mousemove. Pushing each one into the store rebuilds every node/edge
+      // and re-renders the whole canvas (slow with many tables). Defer to the
+      // end of the drag; React Flow owns the live marquee highlight anyway.
+      if (isSelectingRef.current) {
+        pendingSelectionRef.current = next;
+        return;
+      }
       // Ignore the echo of a selection we just pushed into RF via the sync
       // effect; otherwise store→RF→onSelectionChange→store loops forever.
       if (lastPushedSelectionRef.current && isSelectionEqual(lastPushedSelectionRef.current, next)) {
@@ -263,6 +273,18 @@ function DiagramCanvasInner() {
     },
     [isTable, isGroup, isNote, setSelection],
   );
+
+  const handleSelectionStart = useCallback(() => {
+    isSelectingRef.current = true;
+    pendingSelectionRef.current = null;
+  }, []);
+
+  const handleSelectionEnd = useCallback(() => {
+    isSelectingRef.current = false;
+    const pending = pendingSelectionRef.current;
+    pendingSelectionRef.current = null;
+    if (pending) setSelection(pending);
+  }, [setSelection]);
 
   const handleNodeDragStart: OnNodeDrag<Node> = useCallback((_, node) => {
     busyRef.current = true;
@@ -467,6 +489,8 @@ function DiagramCanvasInner() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onSelectionChange={handleSelectionChange}
+        onSelectionStart={handleSelectionStart}
+        onSelectionEnd={handleSelectionEnd}
         onNodeDragStart={handleNodeDragStart}
         onNodeDrag={handleNodeDrag}
         onNodeDragStop={handleNodeDragStop}
@@ -481,7 +505,7 @@ function DiagramCanvasInner() {
         minZoom={0.05}
         maxZoom={4}
         selectionOnDrag={activeTool === "select"}
-        panOnDrag={activeTool === "pan" ? [0, 2] : [2]}
+        panOnDrag={activeTool === "pan" ? [0, 1, 2] : [1, 2]}
         panOnScroll
         panOnScrollSpeed={0.5}
         zoomOnScroll={false}
