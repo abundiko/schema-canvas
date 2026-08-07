@@ -158,3 +158,45 @@ describe("driver-specific syntax", () => {
     expect(status.enumValues).toEqual(["active", "disabled"]);
   });
 });
+
+describe("columns without a type", () => {
+  it("defaults an untyped column to varchar instead of skipping it", () => {
+    const sql = `CREATE TABLE notes (
+      id INT PRIMARY KEY,
+      body,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );`;
+    const parsed = parseDdl(sql, { driver: "mysql" });
+    const table = parsed.tables[0];
+    const body = table.columns.find((c) => c.name === "body");
+    expect(body).toBeDefined();
+    expect(body!.type).toBe("varchar");
+    expect(parsed.warnings.some((w) => w.includes("no type"))).toBe(true);
+    expect(table.columns).toHaveLength(3);
+  });
+
+  it("still parses an untyped column with inline attributes", () => {
+    const sql = `CREATE TABLE events (
+      id INT PRIMARY KEY
+    );
+    CREATE TABLE audit (
+      id INT PRIMARY KEY,
+      payload REFERENCES events(id)
+    );`;
+    const parsed = parseDdl(sql, { driver: "postgresql" });
+    const payload = parsed.tables.find((t) => t.name === "audit")!
+      .columns.find((c) => c.name === "payload")!;
+    expect(payload.type).toBe("varchar");
+    expect(parsed.relationships).toHaveLength(1);
+  });
+});
+
+describe("large imports", () => {
+  it("parses more than 20 tables without dropping any", () => {
+    const tables = Array.from({ length: 30 }, (_, i) =>
+      `CREATE TABLE t${i} ( id INT PRIMARY KEY, value VARCHAR(100) );`,
+    ).join("\n");
+    const parsed = parseDdl(tables, { driver: "mysql" });
+    expect(parsed.tables).toHaveLength(30);
+  });
+});
