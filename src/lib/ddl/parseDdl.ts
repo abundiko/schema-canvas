@@ -195,10 +195,8 @@ function parseColumn(
     }
   }
   if (typeParts.length === 0) {
-    warnings.push(`Column "${name}" in "${tableName}" has no type; skipped`);
-    // skip the rest of this column definition
-    const { next } = collectUntilSep(tokens, i);
-    return { item: { column: undefined as never }, next };
+    warnings.push(`Column "${name}" in "${tableName}" has no type; defaulted to varchar`);
+    typeParts = ["varchar"];
   }
   const typeRaw = typeParts.join(" ");
   const typeLower = normalizeType(typeRaw);

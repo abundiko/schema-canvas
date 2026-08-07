@@ -148,13 +148,16 @@ function parseTableBlock(block: string, tableId: string, warnings: string[]): Ta
     const settingsRaw = bracketStart >= 0 ? line.slice(bracketStart + 1, line.lastIndexOf("]")) : "";
 
     const headTokens = head.split(/\s+/).filter(Boolean);
-    if (headTokens.length < 2) {
+    if (headTokens.length === 0) {
       warnings.push(`Unparsable column line in "${tableName}": ${line}`);
       i += 1;
       continue;
     }
     const name = headTokens[0];
-    const type = headTokens.slice(1).join(" ");
+    if (headTokens.length < 2) {
+      warnings.push(`Column "${name}" in "${tableName}" has no type; defaulted to varchar`);
+    }
+    const type = headTokens.length >= 2 ? headTokens.slice(1).join(" ") : "varchar";
     const settings = parseSettings(settingsRaw);
 
     const col: Column = {

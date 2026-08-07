@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { FileUp, TriangleAlert, ClipboardPaste } from "lucide-react";
 
-import { useDiagramStore, MAX_TABLES } from "#/lib/store/diagramStore";
+import { useDiagramStore } from "#/lib/store/diagramStore";
 import { parseDdl, detectDriver } from "#/lib/ddl/parseDdl";
 import { DRIVERS, type DriverConfig } from "#/lib/drivers";
 import type { Driver, TableEntity } from "#/types/diagram";
@@ -15,7 +15,6 @@ interface ImportResult {
   tables: number;
   relationships: number;
   warnings: string[];
-  truncated: string[];
 }
 
 export function ImportDdlDialog() {
@@ -65,7 +64,6 @@ export function ImportDdlDialog() {
     let tables = [...diagram.tables];
     let relationships = [...diagram.relationships];
     const warnings = [...parsed.warnings];
-    const truncated: string[] = [];
 
     let maxX = 100;
     for (const t of tables) maxX = Math.max(maxX, t.position.x + 260);
@@ -77,10 +75,6 @@ export function ImportDdlDialog() {
 
     const newTables: TableEntity[] = [];
     for (const t of parsed.tables) {
-      if (tables.length + newTables.length >= MAX_TABLES) {
-        truncated.push(t.name);
-        continue;
-      }
       const existingId = existingNames.get(t.name.toLowerCase());
       let name = t.name;
       if (existingId) {
@@ -177,7 +171,6 @@ export function ImportDdlDialog() {
       tables: newTables.length,
       relationships: relationships.length - diagram.relationships.length,
       warnings,
-      truncated,
     });
   };
 
@@ -263,12 +256,6 @@ export function ImportDdlDialog() {
                 <span>{w}</span>
               </div>
             ))}
-            {result.truncated.length > 0 && (
-              <div className="mt-1 text-orange-700 dark:text-orange-400">
-                Sandbox limit is {MAX_TABLES} tables — truncated:{" "}
-                {result.truncated.join(", ")}
-              </div>
-            )}
           </div>
         )}
 

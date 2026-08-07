@@ -18,8 +18,6 @@ import { DEFAULT_TABLE_COLOR } from "#/lib/utils/palettes";
 import { createId } from "#/lib/utils/ids";
 import { layoutDiagram, type LayoutMode } from "#/lib/layout/autoLayout";
 
-export const MAX_TABLES = 20;
-
 interface ClipboardPayload {
   tables: TableEntity[];
   relationships: Relationship[];
@@ -176,7 +174,6 @@ export const useDiagramStore = create<DiagramStoreState>()(
 
       addTable: () => {
         const driver = get().diagram.driver;
-        if (get().diagram.tables.length >= MAX_TABLES) return "";
         const table = createDefaultTable(driver);
         const count = get().diagram.tables.length;
         const position = { x: count * 40, y: count * 40 };
@@ -268,8 +265,7 @@ export const useDiagramStore = create<DiagramStoreState>()(
         const tableIdMap = new Map<string, string>();
         const columnIdMap = new Map<string, string>();
 
-        const available = Math.max(0, MAX_TABLES - current.tables.length);
-        const tablesToAdd = payload.tables.slice(0, available);
+        const tablesToAdd = payload.tables;
 
         const newTables = tablesToAdd.map((t) => {
           const newTableId = createId("tbl");

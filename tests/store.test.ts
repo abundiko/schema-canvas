@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { useDiagramStore, MAX_TABLES, createBlankDiagram } from "#/lib/store/diagramStore";
+import { useDiagramStore, createBlankDiagram } from "#/lib/store/diagramStore";
 
 beforeEach(() => {
   useDiagramStore.getState().setDiagram({ ...createBlankDiagram(), tables: [] });
@@ -66,12 +66,12 @@ describe("diagramStore", () => {
     expect(s.diagram.relationships).toHaveLength(0);
   });
 
-  it("enforces the 20-table sandbox cap", () => {
+  it("adds tables without a sandbox cap", () => {
     const store = useDiagramStore.getState();
-    for (let i = 0; i < MAX_TABLES; i++) store.addTable();
-    expect(useDiagramStore.getState().diagram.tables).toHaveLength(MAX_TABLES);
-    expect(store.addTable()).toBe("");
-    expect(useDiagramStore.getState().diagram.tables).toHaveLength(MAX_TABLES);
+    for (let i = 0; i < 25; i++) store.addTable();
+    expect(useDiagramStore.getState().diagram.tables).toHaveLength(25);
+    expect(store.addTable()).not.toBe("");
+    expect(useDiagramStore.getState().diagram.tables).toHaveLength(26);
   });
 
   it("adds a group and assigns tables to it", () => {
