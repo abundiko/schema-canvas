@@ -259,7 +259,6 @@ export const useDiagramStore = create<DiagramStoreState>()(
 
       pasteTables: () => {
         const payload = clipboard;
-        const current = get().diagram;
         if (!payload || payload.tables.length === 0) return [];
 
         const tableIdMap = new Map<string, string>();
