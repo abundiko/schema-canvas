@@ -94,6 +94,10 @@ export function useEditorShortcuts() {
         case "T":
           useDiagramStore.getState().setActiveTool("table");
           break;
+        case "s":
+        case "S":
+          useDiagramStore.getState().setActiveTool("select");
+          break;
         case "n":
         case "N":
           useDiagramStore.getState().setActiveTool("note");

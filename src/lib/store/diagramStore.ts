@@ -28,6 +28,12 @@ function now(): string {
   return new Date().toISOString();
 }
 
+export interface ViewportState {
+  x: number;
+  y: number;
+  zoom: number;
+}
+
 export function isSelectionEqual(a: Selection, b: Selection): boolean {
   if (a.type !== b.type) return false;
   switch (a.type) {
@@ -129,6 +135,8 @@ interface DiagramStoreState {
   activeTabId: string;
   canUndo: boolean;
   canRedo: boolean;
+  /** Per-tab canvas viewport so panning/zooming one tab doesn't move the others. */
+  viewports: Record<string, ViewportState>;
   selection: Selection;
   activeTool: ActiveTool;
   panelCollapsed: boolean;
@@ -137,6 +145,7 @@ interface DiagramStoreState {
   setDiagramName: (name: string) => void;
   setDiagramDescription: (description: string) => void;
   setDriver: (driver: Driver) => void;
+  setViewportForTab: (tabId: string, viewport: ViewportState) => void;
 
   addTable: () => string;
   updateTable: (tableId: string, patch: Partial<TableEntity>) => void;
@@ -261,6 +270,7 @@ export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
     activeTabId: initialTab.id,
     canUndo: false,
     canRedo: false,
+    viewports: {},
     selection: { type: "none" },
     activeTool: "select",
     panelCollapsed: false,
@@ -926,6 +936,9 @@ export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
       setActiveTool: (activeTool) => set({ activeTool }),
       setPanelCollapsed: (panelCollapsed) => set({ panelCollapsed }),
 
+      setViewportForTab: (tabId, viewport) =>
+        set((s) => ({ viewports: { ...s.viewports, [tabId]: viewport } })),
+
       /* ------------------------------ tabs ------------------------------ */
 
       addTab: () => {
@@ -954,9 +967,11 @@ export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
           const index = s.tabs.findIndex((t) => t.id === tabId);
           const tabs = s.tabs.filter((t) => t.id !== tabId);
           histMap.delete(tabId);
-          if (s.activeTabId !== tabId) return { tabs };
+          const viewports = { ...s.viewports };
+          delete viewports[tabId];
+          if (s.activeTabId !== tabId) return { tabs, viewports };
           const nextActive = tabs[Math.min(Math.max(index, 0), tabs.length - 1)];
-          return { tabs, activeTabId: nextActive.id, selection: { type: "none" } };
+          return { tabs, viewports, activeTabId: nextActive.id, selection: { type: "none" } };
         });
       },
 

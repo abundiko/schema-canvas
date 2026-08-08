@@ -72,6 +72,7 @@ interface GroupDragState {
 
 function DiagramCanvasInner() {
   const diagram = useDiagramStore((s) => s.diagram);
+  const activeTabId = useDiagramStore((s) => s.activeTabId);
   const activeTool = useDiagramStore((s) => s.activeTool);
   const selection = useDiagramStore((s) => s.selection);
   const setSelection = useDiagramStore((s) => s.setSelection);
@@ -93,8 +94,23 @@ function DiagramCanvasInner() {
   const gridVisible = useUiStore((s) => s.gridVisible);
   const setZoom = useUiStore((s) => s.setZoom);
 
+  // Keep a per-tab viewport so switching tabs restores that tab's pan/zoom.
+  const hadInitialViewport = useRef(false);
+  useEffect(() => {
+    const store = useDiagramStore.getState();
+    const saved = store.viewports[activeTabId];
+    if (saved && hadInitialViewport.current) {
+      setViewport({ x: saved.x, y: saved.y, zoom: saved.zoom });
+    }
+    hadInitialViewport.current = true;
+  }, [activeTabId, setViewport]);
+
   const handleMove = useCallback(
-    (_: unknown, viewport: { x: number; y: number; zoom: number }) => setZoom(viewport.zoom),
+    (_: unknown, viewport: { x: number; y: number; zoom: number }) => {
+      setZoom(viewport.zoom);
+      const store = useDiagramStore.getState();
+      store.setViewportForTab(store.activeTabId, viewport);
+    },
     [setZoom],
   );
 
