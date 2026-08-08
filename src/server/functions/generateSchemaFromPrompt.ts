@@ -29,7 +29,6 @@ export interface AiGenerateResult {
   tables: AiProposedTable[];
   relationships: AiProposedRelationship[];
   summary: string;
-  source?: "groq" | "mock";
 }
 
 export interface GenerateSchemaInput {
@@ -40,9 +39,9 @@ export interface GenerateSchemaInput {
 
 const SQL_DRIVERS = z.enum(["mysql", "postgresql", "sqlserver", "mariadb"]);
 
-// All fields are required because Groq strict structured outputs (json_schema
-// with strict: true) requires that; empty strings are normalized to `undefined`
-// after validation.
+// All fields are required because the model's strict structured outputs
+// (json_schema with strict: true) require that; empty strings are normalized
+// to `undefined` after validation.
 const generationSchema = z.object({
   driver: SQL_DRIVERS,
   tables: z.array(
@@ -92,98 +91,15 @@ Rules:
   newly generated tables, but every referenced table/column must exist.
 - "driver" must be the driver provided in the request.`;
 
-const GROQ_MODEL = "openai/gpt-oss-120b";
-
-const BILLING_SCHEMA: AiGenerateResult = {
-  driver: "mysql",
-  tables: [
-    {
-      name: "customers",
-      color: "#818cf8",
-      columns: [
-        { name: "id", type: "int", nullable: false, keyType: "primary" },
-        { name: "email", type: "varchar", nullable: false, keyType: "unique" },
-        { name: "name", type: "varchar", nullable: true, keyType: "none" },
-        { name: "created_at", type: "datetime", nullable: true, keyType: "none" },
-      ],
-    },
-    {
-      name: "invoices",
-      color: "#4ade80",
-      columns: [
-        { name: "id", type: "int", nullable: false, keyType: "primary" },
-        { name: "customer_id", type: "int", nullable: false, keyType: "index" },
-        { name: "number", type: "varchar", nullable: false, keyType: "none" },
-        { name: "status", type: "varchar", nullable: false, keyType: "none" },
-        { name: "issued_at", type: "datetime", nullable: false, keyType: "none" },
-      ],
-    },
-    {
-      name: "invoice_items",
-      color: "#f472b6",
-      columns: [
-        { name: "id", type: "int", nullable: false, keyType: "primary" },
-        { name: "invoice_id", type: "int", nullable: false, keyType: "index" },
-        { name: "description", type: "varchar", nullable: false, keyType: "none" },
-        { name: "quantity", type: "int", nullable: false, keyType: "none" },
-        { name: "unit_price", type: "decimal", typeParams: "10,2", nullable: false, keyType: "none" },
-      ],
-    },
-  ],
-  relationships: [
-    { fromTable: "invoices", fromColumn: "customer_id", toTable: "customers", toColumn: "id" },
-    { fromTable: "invoice_items", fromColumn: "invoice_id", toTable: "invoices", toColumn: "id" },
-  ],
-  summary:
-    "Customers are billed on invoices; each invoice item line belongs to one invoice. Invoices reference the customer via customer_id.",
-};
-
-const USER_SCHEMA: AiGenerateResult = {
-  driver: "mysql",
-  tables: [
-    {
-      name: "users",
-      color: "#60a5fa",
-      columns: [
-        { name: "id", type: "int", nullable: false, keyType: "primary" },
-        { name: "email", type: "varchar", nullable: false, keyType: "unique" },
-        { name: "password_hash", type: "varchar", nullable: false, keyType: "none" },
-        { name: "created_at", type: "datetime", nullable: true, keyType: "none" },
-      ],
-    },
-    {
-      name: "sessions",
-      color: "#fb923c",
-      columns: [
-        { name: "id", type: "int", nullable: false, keyType: "primary" },
-        { name: "user_id", type: "int", nullable: false, keyType: "index" },
-        { name: "token", type: "varchar", nullable: false, keyType: "none" },
-        { name: "expires_at", type: "datetime", nullable: false, keyType: "none" },
-      ],
-    },
-  ],
-  relationships: [
-    { fromTable: "sessions", fromColumn: "user_id", toTable: "users", toColumn: "id" },
-  ],
-  summary:
-    "Users authenticate and own sessions; each session references its user via user_id.",
-};
-
-function mockGenerate(prompt: string): AiGenerateResult {
-  const p = prompt.toLowerCase();
-  const result: AiGenerateResult = /invoice|billing|order|payment/.test(p)
-    ? BILLING_SCHEMA
-    : /user|auth|login|account/.test(p)
-      ? USER_SCHEMA
-      : BILLING_SCHEMA;
-  return { ...result, source: "mock" };
-}
+const MODEL = "openai/gpt-oss-120b";
 
 export const generateSchemaFromPrompt = createServerFn({ method: "POST" })
   .validator((input: GenerateSchemaInput) => input)
   .handler(async ({ data }) => {
     const apiKey = process.env.GROQ_API_KEY;
-    if (!apiKey) return mockGenerate(data.prompt);
+    if (!apiKey) {
+      throw new Error("Schema generation isn't configured on the server yet — no API key is set. Add one to the server environment and retry.");
+    }
 
     const context =
       data.existing.length > 0
@@ -192,7 +108,7 @@ export const generateSchemaFromPrompt = createServerFn({ method: "POST" })
 
     try {
       const { object } = await generateObject({
-        model: createGroq({ apiKey })(GROQ_MODEL),
+        model: createGroq({ apiKey })(MODEL),
         schema: generationSchema,
         schemaName: "schema_design",
         schemaDescription: "New tables and relationships to add to the existing schema",
@@ -207,9 +123,9 @@ export const generateSchemaFromPrompt = createServerFn({ method: "POST" })
           typeParams: c.typeParams || undefined,
         })),
       }));
-      return { ...object, tables, source: "groq" as const };
+      return { ...object, tables };
     } catch (err) {
-      console.error("[ai] Groq schema generation failed, falling back to mock:", err);
-      return mockGenerate(data.prompt);
+      console.error("[ai] Schema generation failed:", err);
+      throw new Error("The AI service returned an error. Nothing was generated — please try again.");
     }
   });
