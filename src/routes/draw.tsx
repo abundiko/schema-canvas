@@ -4,13 +4,14 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { useDiagramStore } from "#/lib/store/diagramStore";
 import { useUiStore } from "#/lib/store/uiStore";
-import { loadDiagram } from "#/lib/persistence/autosave";
+import { loadSession } from "#/lib/persistence/autosave";
 import { startAutosave } from "#/lib/persistence/hydrate";
 import { decodeDiagram } from "#/lib/utils/compress";
-import { registerExportRoot } from "#/lib/export/exportImage";
 import { useEditorShortcuts } from "#/lib/utils/useEditorShortcuts";
+import { registerExportRoot } from "#/lib/export/exportImage";
 import { DiagramCanvas } from "#/components/canvas/DiagramCanvas";
 import { TopNavBar } from "#/components/toolbars/TopNavBar";
+import { TabBar } from "#/components/toolbars/TabBar";
 import { CanvasToolSwitcher } from "#/components/toolbars/CanvasToolSwitcher";
 import { ViewportToolbar } from "#/components/toolbars/ViewportToolbar";
 import { AIPanel } from "#/components/toolbars/AIPanel";
@@ -27,13 +28,20 @@ export const Route = createFileRoute("/draw")({
 });
 
 function DrawPage() {
-  const setDiagram = useDiagramStore((s) => s.setDiagram);
+  const diagramName = useDiagramStore((s) => s.diagram.name);
+  const openDiagram = useDiagramStore((s) => s.openDiagram);
+  const replaceSession = useDiagramStore((s) => s.replaceSession);
   const panelCollapsed = useDiagramStore((s) => s.panelCollapsed);
   const aiOpen = useUiStore((s) => s.aiOpen);
   const setAiOpen = useUiStore((s) => s.setAiOpen);
   const notice = useUiStore((s) => s.notice);
 
   const hydratedRef = useRef(false);
+
+  // Reflect the active diagram's name in the browser tab title
+  useEffect(() => {
+    document.title = `${diagramName} — SchemaCanvas`;
+  }, [diagramName]);
 
   useEffect(() => {
     if (hydratedRef.current) return;
@@ -43,15 +51,13 @@ function DrawPage() {
     const encoded = params.get("d");
     if (encoded) {
       const shared = decodeDiagram(encoded);
-      if (shared) {
-        setDiagram(shared);
-        return;
-      }
+      if (shared) openDiagram(shared);
+      return;
     }
-    void loadDiagram().then((saved) => {
-      if (saved) setDiagram(saved);
+    void loadSession().then((saved) => {
+      if (saved) replaceSession(saved);
     });
-  }, [setDiagram]);
+  }, [openDiagram, replaceSession]);
 
   useEffect(() => {
     return startAutosave();
@@ -62,6 +68,7 @@ function DrawPage() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-canvas-bg">
       <TopNavBar />
+      <TabBar />
 
       <div className="flex min-h-0 flex-1">
         {!panelCollapsed && <InspectorPanel />}

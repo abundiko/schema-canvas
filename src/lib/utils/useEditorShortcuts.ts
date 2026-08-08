@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useDiagramStore } from "#/lib/store/diagramStore";
 import { useUiStore } from "#/lib/store/uiStore";
 import { emitCanvasEvent } from "#/lib/utils/canvasEvents";
-import { saveDiagram } from "#/lib/persistence/autosave";
+import { saveSession } from "#/lib/persistence/autosave";
 import { copySelection } from "#/lib/utils/commands";
 
 function isEditable(target: EventTarget | null): boolean {
@@ -27,15 +27,23 @@ export function useEditorShortcuts() {
       if (mod) {
         if (e.key.toLowerCase() === "z") {
           e.preventDefault();
-          const temporal = useDiagramStore.temporal.getState();
-          if (e.shiftKey) temporal.redo();
-          else if (!isEditable(target)) temporal.undo();
+          const store = useDiagramStore.getState();
+          if (e.shiftKey) store.redo();
+          else if (!isEditable(target)) store.undo();
           return;
         }
         if (e.key.toLowerCase() === "s") {
           e.preventDefault();
-          void saveDiagram(useDiagramStore.getState().diagram);
-          useUiStore.getState().showNotice("Diagram saved to this browser.");
+          const s = useDiagramStore.getState();
+          void saveSession({ tabs: s.tabs, activeTabId: s.activeTabId });
+          useUiStore.getState().showNotice("Diagrams saved to this browser.");
+          return;
+        }
+        if (/^[1-9]$/.test(e.key)) {
+          e.preventDefault();
+          const tabs = useDiagramStore.getState().tabs;
+          const tab = tabs[Number(e.key) - 1];
+          if (tab) useDiagramStore.getState().switchTab(tab.id);
           return;
         }
         if (e.key.toLowerCase() === "k") {

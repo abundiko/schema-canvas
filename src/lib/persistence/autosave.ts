@@ -2,46 +2,71 @@ import { get, set } from "idb-keyval";
 
 import type { Diagram } from "#/types/diagram";
 
-const STORAGE_KEY = "schemacanvas:diagram:v1";
+export interface SavedSession {
+  tabs: Diagram[];
+  activeTabId: string;
+}
 
-export async function saveDiagram(diagram: Diagram): Promise<void> {
+const SESSION_KEY = "schemacanvas:diagram:v2";
+const LEGACY_KEY = "schemacanvas:diagram:v1";
+
+async function write(key: string, value: unknown): Promise<void> {
   try {
-    await set(STORAGE_KEY, diagram);
+    await set(key, value);
     return;
   } catch {
     // IndexedDB unavailable → fall through to localStorage
   }
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(diagram));
+    localStorage.setItem(key, JSON.stringify(value));
   } catch {
     // storage full / unavailable; swallow
   }
 }
 
-export async function loadDiagram(): Promise<Diagram | null> {
+async function read<T>(key: string): Promise<T | null> {
   try {
-    const value = await get<Diagram>(STORAGE_KEY);
+    const value = await get<T>(key);
     if (value) return value;
   } catch {
     // fall through
   }
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as Diagram;
+    const raw = localStorage.getItem(key);
+    if (raw) return JSON.parse(raw) as T;
   } catch {
     // corrupted draft — ignore
   }
   return null;
 }
 
-export async function clearDiagram(): Promise<void> {
+export async function saveSession(session: SavedSession): Promise<void> {
+  await write(SESSION_KEY, session);
+}
+
+export async function loadSession(): Promise<SavedSession | null> {
+  const current = await read<SavedSession>(SESSION_KEY);
+  if (current && Array.isArray(current.tabs) && current.tabs.length > 0) {
+    return current;
+  }
+  // Migrate the pre-tabs single-diagram autosave into a tab.
+  const legacy = await read<Diagram>(LEGACY_KEY);
+  if (legacy) {
+    return { tabs: [{ ...legacy, name: "Untitled file" }], activeTabId: legacy.id };
+  }
+  return null;
+}
+
+export async function clearSession(): Promise<void> {
   try {
-    await set(STORAGE_KEY, undefined);
+    await set(SESSION_KEY, undefined);
+    await set(LEGACY_KEY, undefined);
   } catch {
     // ignore
   }
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(LEGACY_KEY);
   } catch {
     // ignore
   }

@@ -35,9 +35,8 @@ export function ViewportToolbar() {
     });
   }, []);
 
-  const temporal = useDiagramStore.temporal;
-  const canUndo = temporal.getState().pastStates.length > 0;
-  const canRedo = temporal.getState().futureStates.length > 0;
+  const canUndo = useDiagramStore((s) => s.canUndo);
+  const canRedo = useDiagramStore((s) => s.canRedo);
 
   return (
     <div className="pointer-events-none absolute bottom-3 right-3 z-20 flex items-center gap-1.5">
@@ -68,14 +67,14 @@ export function ViewportToolbar() {
         </IconButton>
         <IconButton
           label="Undo (Ctrl+Z)"
-          onClick={() => temporal.getState().undo()}
+          onClick={() => useDiagramStore.getState().undo()}
           disabled={!canUndo}
         >
           <Undo2 size={15} />
         </IconButton>
         <IconButton
           label="Redo (Ctrl+Shift+Z)"
-          onClick={() => temporal.getState().redo()}
+          onClick={() => useDiagramStore.getState().redo()}
           disabled={!canRedo}
         >
           <Redo2 size={15} />

@@ -15,6 +15,7 @@ const SHORTCUTS: Array<{ keys: string; label: string }> = [
   { keys: "⌘ / Ctrl + Enter", label: "Add a column to the selected table" },
   { keys: "⌘ / Ctrl + '", label: "Add a composite index to the selected table" },
   { keys: "⌘ / Ctrl + S", label: "Save to browser" },
+  { keys: "⌘ / Ctrl + 1…9", label: "Switch diagram tab" },
   { keys: "+ / =", label: "Zoom in" },
   { keys: "-", label: "Zoom out" },
   { keys: "Delete / Backspace", label: "Delete selection" },

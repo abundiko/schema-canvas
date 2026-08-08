@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { temporal } from "zundo";
 
 import type {
   ActiveTool,
@@ -75,10 +74,10 @@ function createDefaultTable(driver: Driver): TableEntity {
   };
 }
 
-function defaultDiagram(): Diagram {
+function defaultDiagram(name = "Untitled diagram"): Diagram {
   return {
     id: createId("diag"),
-    name: "Untitled diagram",
+    name,
     driver: "mysql",
     tables: [createDefaultTable("mysql")],
     relationships: [],
@@ -93,8 +92,43 @@ export function createBlankDiagram(): Diagram {
   return defaultDiagram();
 }
 
+/* ------------------------------ tab history ------------------------------ */
+
+interface TabHistory {
+  past: Diagram[];
+  future: Diagram[];
+}
+
+const MAX_HISTORY = 100;
+
+const histMap = new Map<string, TabHistory>();
+let suppressCapture = false;
+
+function getHistory(tabId: string): TabHistory {
+  let h = histMap.get(tabId);
+  if (!h) {
+    h = { past: [], future: [] };
+    histMap.set(tabId, h);
+  }
+  return h;
+}
+
+/** Record an edit to a tab's diagram (before the change is applied). */
+function pushHistory(tabId: string, diagram: Diagram): void {
+  const h = getHistory(tabId);
+  h.past.push(diagram);
+  if (h.past.length > MAX_HISTORY) h.past.shift();
+  h.future.length = 0;
+}
+
 interface DiagramStoreState {
+  /** Active diagram — every existing component reads this; kept in sync with `tabs`. */
   diagram: Diagram;
+  /** All open diagram tabs, in tab order. */
+  tabs: Diagram[];
+  activeTabId: string;
+  canUndo: boolean;
+  canRedo: boolean;
   selection: Selection;
   activeTool: ActiveTool;
   panelCollapsed: boolean;
@@ -154,17 +188,84 @@ interface DiagramStoreState {
   setSelection: (selection: Selection) => void;
   setActiveTool: (tool: ActiveTool) => void;
   setPanelCollapsed: (collapsed: boolean) => void;
+
+  addTab: () => string;
+  switchTab: (tabId: string) => void;
+  closeTab: (tabId: string) => void;
+  renameTab: (tabId: string, name: string) => void;
+  openDiagram: (diagram: Diagram) => void;
+  replaceSession: (session: { tabs: Diagram[]; activeTabId: string }) => void;
+  reset: () => void;
+  undo: () => void;
+  redo: () => void;
 }
 
-export const useDiagramStore = create<DiagramStoreState>()(
-  temporal(
-    (set, get) => ({
-      diagram: defaultDiagram(),
-      selection: { type: "none" },
-      activeTool: "select",
-      panelCollapsed: false,
+const initialTab = defaultDiagram();
 
-      setDiagram: (diagram) => set({ diagram: { ...diagram, updatedAt: now() } }),
+export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
+  const rawSet = set;
+
+  const commit = (partial: any, replace?: boolean) => {
+    (rawSet as (p: any, r?: boolean) => void)((prev: DiagramStoreState) => {
+      const patch = (
+        typeof partial === "function" ? (partial as any)(prev) : partial
+      ) as Partial<DiagramStoreState>;
+      const nextActiveId = patch.activeTabId ?? prev.activeTabId;
+
+      // A change to the active tab's diagram is an edit worth undoing.
+      if (
+        !suppressCapture &&
+        patch.diagram &&
+        patch.diagram !== prev.diagram &&
+        nextActiveId === prev.activeTabId
+      ) {
+        pushHistory(nextActiveId, prev.diagram);
+      }
+
+      // Keep `tabs` in sync with the active `diagram`.
+      let tabs = patch.tabs ?? prev.tabs;
+      if (patch.diagram) {
+        tabs = tabs.map((t) => (t.id === patch.diagram?.id ? patch.diagram! : t));
+      }
+
+      // Derive `diagram` from the active tab unless the call already supplied one
+      // for a brand-new tab.
+      let diagram = patch.diagram ?? prev.diagram;
+      if (
+        patch.activeTabId !== undefined ||
+        patch.tabs !== undefined ||
+        patch.diagram === undefined
+      ) {
+        const active = tabs.find((t) => t.id === nextActiveId);
+        if (active) diagram = active;
+      }
+
+      const h = getHistory(nextActiveId);
+      return {
+        ...patch,
+        tabs,
+        diagram,
+        activeTabId: nextActiveId,
+        canUndo: h.past.length > 0,
+        canRedo: h.future.length > 0,
+      };
+    }, replace);
+  };
+
+  // All actions below call `set(...)`; route them through the reconciler.
+  set = commit as typeof set;
+
+  return {
+    diagram: initialTab,
+    tabs: [initialTab],
+    activeTabId: initialTab.id,
+    canUndo: false,
+    canRedo: false,
+    selection: { type: "none" },
+    activeTool: "select",
+    panelCollapsed: false,
+
+    setDiagram: (diagram) => set({ diagram: { ...diagram, updatedAt: now() } }),
       setDiagramName: (name) =>
         set((s) => ({ diagram: { ...s.diagram, name, updatedAt: now() } })),
       setDiagramDescription: (description) =>
@@ -824,15 +925,127 @@ export const useDiagramStore = create<DiagramStoreState>()(
       },
       setActiveTool: (activeTool) => set({ activeTool }),
       setPanelCollapsed: (panelCollapsed) => set({ panelCollapsed }),
-    }),
-    {
-      partialize: (state) => ({ diagram: state.diagram }),
-      limit: 100,
-      equality: (a, b) => a.diagram === b.diagram,
-    },
-  ),
+
+      /* ------------------------------ tabs ------------------------------ */
+
+      addTab: () => {
+        const s = get();
+        const numbered = s.tabs.filter((t) => t.name.startsWith("Untitled diagram"));
+        const d = defaultDiagram(`Untitled diagram ${numbered.length + 1}`);
+        set((st) => ({
+          tabs: [...st.tabs, d],
+          activeTabId: d.id,
+          diagram: d,
+          selection: { type: "none" },
+        }));
+        return d.id;
+      },
+
+      switchTab: (tabId) =>
+        set((s) =>
+          s.activeTabId === tabId
+            ? {}
+            : { activeTabId: tabId, selection: { type: "none" } },
+        ),
+
+      closeTab: (tabId) => {
+        set((s) => {
+          if (s.tabs.length <= 1) return {};
+          const index = s.tabs.findIndex((t) => t.id === tabId);
+          const tabs = s.tabs.filter((t) => t.id !== tabId);
+          histMap.delete(tabId);
+          if (s.activeTabId !== tabId) return { tabs };
+          const nextActive = tabs[Math.min(Math.max(index, 0), tabs.length - 1)];
+          return { tabs, activeTabId: nextActive.id, selection: { type: "none" } };
+        });
+      },
+
+      renameTab: (tabId, name) =>
+        set((s) => {
+          const trimmed = name.trim();
+          if (!trimmed) return {};
+          return {
+            tabs: s.tabs.map((t) =>
+              t.id === tabId ? { ...t, name: trimmed, updatedAt: now() } : t,
+            ),
+          };
+        }),
+
+      openDiagram: (diagram) =>
+        set((s) => {
+          const existing = s.tabs.find((t) => t.id === diagram.id);
+          if (existing) return { activeTabId: existing.id, selection: { type: "none" } };
+          const d = { ...diagram, updatedAt: now() };
+          return {
+            tabs: [...s.tabs, d],
+            activeTabId: d.id,
+            diagram: d,
+            selection: { type: "none" },
+          };
+        }),
+
+      replaceSession: ({ tabs, activeTabId }) => {
+        const resolved = tabs.length ? tabs : [createBlankDiagram()];
+        const id = resolved.some((t) => t.id === activeTabId)
+          ? activeTabId
+          : resolved[0].id;
+        for (const key of [...histMap.keys()]) {
+          if (!resolved.some((t) => t.id === key)) histMap.delete(key);
+        }
+        set(() => ({
+          tabs: resolved,
+          activeTabId: id,
+          diagram: resolved.find((t) => t.id === id)!,
+          selection: { type: "none" },
+        }));
+      },
+
+      reset: () => {
+        histMap.clear();
+        const d: Diagram = { ...createBlankDiagram(), tables: [] };
+        set(() => ({
+          tabs: [d],
+          activeTabId: d.id,
+          diagram: d,
+          selection: { type: "none" },
+          canUndo: false,
+          canRedo: false,
+        }));
+      },
+
+      /* ------------------------- per-tab undo/redo ------------------------- */
+
+      undo: () => {
+        const { activeTabId, diagram } = get();
+        const h = getHistory(activeTabId);
+        const last = h.past.pop();
+        if (!last) return;
+        h.future.push(diagram);
+        suppressCapture = true;
+        try {
+          set({ diagram: { ...last, updatedAt: now() } });
+        } finally {
+          suppressCapture = false;
+        }
+      },
+
+      redo: () => {
+        const { activeTabId, diagram } = get();
+        const h = getHistory(activeTabId);
+        const next = h.future.pop();
+        if (!next) return;
+        h.past.push(diagram);
+        suppressCapture = true;
+        try {
+          set({ diagram: { ...next, updatedAt: now() } });
+        } finally {
+          suppressCapture = false;
+        }
+      },
+    };
+  },
 );
 
 export function useUndo(): () => void {
-  return () => useDiagramStore.temporal.getState().undo();
+  return () => useDiagramStore.getState().undo();
 }

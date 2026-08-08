@@ -1,11 +1,11 @@
 import { Check, ChevronDown, Database, FileCode2, FileJson, FileText, Image, Monitor, Moon, Plus, Save, Sun } from "lucide-react";
 
-import { useDiagramStore, createBlankDiagram } from "#/lib/store/diagramStore";
+import { useDiagramStore } from "#/lib/store/diagramStore";
 import { resolveTheme, useUiStore, type ThemeMode } from "#/lib/store/uiStore";
 import { exportSql, exportDbml, exportTs, exportMongoSchema, exportImage, exportDiagramJson } from "#/lib/export/exportActions";
 import { generateTableDdl } from "#/lib/ddl/generateDdl";
 import { DRIVERS, getDriver } from "#/lib/drivers";
-import { saveDiagram } from "#/lib/persistence/autosave";
+import { saveSession } from "#/lib/persistence/autosave";
 import { Dropdown, MenuItem } from "#/components/ui";
 
 const THEME_OPTIONS: Array<{ value: ThemeMode; label: string; Icon: typeof Sun }> = [
@@ -61,24 +61,21 @@ function ThemeSwitcher() {
 
 export function TopNavBar() {
   const diagram = useDiagramStore((s) => s.diagram);
-  const setDiagram = useDiagramStore((s) => s.setDiagram);
   const setDriver = useDiagramStore((s) => s.setDriver);
+  const addTab = useDiagramStore((s) => s.addTab);
   const openDialog = useUiStore((s) => s.openDialog);
   const showNotice = useUiStore((s) => s.showNotice);
 
   const currentDriver = DRIVERS.find((d) => d.id === diagram.driver);
 
-  const newDiagram = () => {
-    if (
-      window.confirm("Start a new diagram? Your current diagram is saved locally.")
-    ) {
-      setDiagram(createBlankDiagram());
-    }
+  const newTab = () => {
+    addTab();
   };
 
   const saveNow = async () => {
-    await saveDiagram(useDiagramStore.getState().diagram);
-    showNotice("Diagram saved to this browser.");
+    const s = useDiagramStore.getState();
+    await saveSession({ tabs: s.tabs, activeTabId: s.activeTabId });
+    showNotice("Diagrams saved to this browser.");
   };
 
   const switchDriver = (id: (typeof DRIVERS)[number]["id"]) => {
@@ -145,10 +142,10 @@ export function TopNavBar() {
               <MenuItem
                 onClick={() => {
                   close();
-                  newDiagram();
+                  newTab();
                 }}
               >
-                <Plus size={14} /> New diagram
+                <Plus size={14} /> New tab
               </MenuItem>
               <MenuItem
                 onClick={() => {

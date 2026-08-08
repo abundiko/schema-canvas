@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { useDiagramStore, createBlankDiagram } from "#/lib/store/diagramStore";
+import { useDiagramStore } from "#/lib/store/diagramStore";
 
 beforeEach(() => {
-  useDiagramStore.getState().setDiagram({ ...createBlankDiagram(), tables: [] });
-  useDiagramStore.getState().setSelection({ type: "none" });
+  useDiagramStore.getState().reset();
 });
 
 describe("diagramStore", () => {
@@ -96,17 +95,83 @@ describe("diagramStore", () => {
   });
 });
 
+describe("tabs", () => {
+  it("adds a tab and switches to it", () => {
+    useDiagramStore.getState().reset();
+    const firstId = useDiagramStore.getState().diagram.id;
+    const secondId = useDiagramStore.getState().addTab();
+    expect(useDiagramStore.getState().diagram.id).toBe(secondId);
+    expect(useDiagramStore.getState().tabs).toHaveLength(2);
+
+    useDiagramStore.getState().switchTab(firstId);
+    expect(useDiagramStore.getState().diagram.id).toBe(firstId);
+    expect(useDiagramStore.getState().activeTabId).toBe(firstId);
+  });
+
+  it("keeps each tab's tables independent", () => {
+    useDiagramStore.getState().addTab();
+    useDiagramStore.getState().addTable();
+    expect(useDiagramStore.getState().diagram.tables.length).toBeGreaterThan(0);
+
+    const firstId = useDiagramStore.getState().tabs[0].id;
+    const secondId = useDiagramStore.getState().activeTabId;
+    useDiagramStore.getState().switchTab(firstId);
+    const firstTables = useDiagramStore.getState().diagram.tables.length;
+    useDiagramStore.getState().switchTab(secondId);
+    expect(useDiagramStore.getState().diagram.tables.length).toBeGreaterThan(firstTables);
+  });
+
+  it("renames the active tab via the active diagram", () => {
+    useDiagramStore.getState().setDiagramName("Payments");
+    expect(useDiagramStore.getState().diagram.name).toBe("Payments");
+    expect(useDiagramStore.getState().tabs[0].name).toBe("Payments");
+  });
+
+  it("renames an inactive tab without changing the active tab", () => {
+    const firstId = useDiagramStore.getState().diagram.id;
+    const secondId = useDiagramStore.getState().addTab();
+    useDiagramStore.getState().renameTab(secondId, "Billing");
+    const s = useDiagramStore.getState();
+    expect(s.tabs.find((t) => t.id === secondId)?.name).toBe("Billing");
+    expect(s.diagram.id).toBe(secondId);
+    expect(s.diagram.name).toBe("Billing");
+
+    useDiagramStore.getState().switchTab(firstId);
+    expect(useDiagramStore.getState().diagram.name).toBe("Untitled diagram");
+  });
+
+  it("closes an inactive tab and stays on the active one", () => {
+    const store = useDiagramStore.getState();
+    const firstId = store.diagram.id;
+    const secondId = store.addTab();
+    store.switchTab(firstId);
+    store.closeTab(secondId);
+    const s = useDiagramStore.getState();
+    expect(s.tabs.map((t) => t.id)).toEqual([firstId]);
+    expect(s.activeTabId).toBe(firstId);
+  });
+
+  it("closing the active tab activates a neighbor", () => {
+    const store = useDiagramStore.getState();
+    const firstId = store.diagram.id;
+    const secondId = store.addTab();
+    store.closeTab(secondId);
+    const s = useDiagramStore.getState();
+    expect(s.tabs.map((t) => t.id)).toEqual([firstId]);
+    expect(s.activeTabId).toBe(firstId);
+  });
+});
+
 describe("undo/redo history", () => {
   it("undoes and redoes table creation", () => {
     const store = useDiagramStore.getState();
     store.addTable();
     expect(useDiagramStore.getState().diagram.tables).toHaveLength(1);
 
-    const temporal = useDiagramStore.temporal.getState();
-    temporal.undo();
+    useDiagramStore.getState().undo();
     expect(useDiagramStore.getState().diagram.tables).toHaveLength(0);
 
-    temporal.redo();
+    useDiagramStore.getState().redo();
     expect(useDiagramStore.getState().diagram.tables).toHaveLength(1);
   });
 
@@ -119,7 +184,24 @@ describe("undo/redo history", () => {
     store.addRelationship(a, tA.columns[0].id, b, tB.columns[0].id, "one-to-many");
     expect(useDiagramStore.getState().diagram.relationships).toHaveLength(1);
 
-    useDiagramStore.temporal.getState().undo();
+    useDiagramStore.getState().undo();
     expect(useDiagramStore.getState().diagram.relationships).toHaveLength(0);
+  });
+
+  it("undo is per-tab", () => {
+    useDiagramStore.getState().addTab();
+    useDiagramStore.getState().addTable();
+    expect(useDiagramStore.getState().diagram.tables).toHaveLength(2);
+
+    useDiagramStore.getState().undo();
+    expect(useDiagramStore.getState().diagram.tables).toHaveLength(1);
+    useDiagramStore.getState().redo();
+    expect(useDiagramStore.getState().diagram.tables).toHaveLength(2);
+
+    const firstId = useDiagramStore.getState().tabs[0].id;
+    useDiagramStore.getState().switchTab(firstId);
+    expect(useDiagramStore.getState().diagram.tables).toHaveLength(0);
+    useDiagramStore.getState().undo();
+    expect(useDiagramStore.getState().diagram.tables).toHaveLength(0);
   });
 });

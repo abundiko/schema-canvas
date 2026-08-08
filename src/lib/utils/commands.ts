@@ -1,4 +1,4 @@
-import { createBlankDiagram, useDiagramStore } from "#/lib/store/diagramStore";
+import { useDiagramStore } from "#/lib/store/diagramStore";
 import { useUiStore, type ThemeMode } from "#/lib/store/uiStore";
 import { emitCanvasEvent } from "#/lib/utils/canvasEvents";
 import { exportDbml, exportDiagramJson, exportImage, exportTs } from "#/lib/export/exportActions";
@@ -20,10 +20,9 @@ export function copySelection(): void {
 export function getCommands(): Command[] {
   const store = useDiagramStore.getState();
   const ui = useUiStore.getState();
-  const temporal = useDiagramStore.temporal.getState();
 
   return [
-    { id: "new", label: "New diagram", keywords: "clear reset blank", run: () => store.setDiagram(createBlankDiagram()) },
+    { id: "new", label: "New tab", keywords: "new diagram clear reset blank", run: () => store.addTab() },
     { id: "import-sql", label: "Import SQL…", keywords: "ddl create table import", run: () => ui.openDialog("import") },
     { id: "import-dbml", label: "Import DBML…", keywords: "dbml import dbml", run: () => ui.openDialog("importDbml") },
     { id: "export-sql", label: "Export SQL…", keywords: "sql ddl download", run: () => ui.openDialog("export") },
@@ -31,8 +30,8 @@ export function getCommands(): Command[] {
     { id: "export-ts", label: "Export TypeScript types…", keywords: "ts typescript types download", run: () => exportTs(useDiagramStore.getState().diagram) },
     { id: "export-json", label: "Export JSON…", keywords: "json download backup", run: () => exportDiagramJson(useDiagramStore.getState().diagram) },
     { id: "export-image", label: "Export image (PNG)…", keywords: "png image download", run: () => void exportImage(useDiagramStore.getState().diagram) },
-    { id: "undo", label: "Undo", keywords: "undo revert", shortcut: "⌘Z", run: () => temporal.undo() },
-    { id: "redo", label: "Redo", keywords: "redo", shortcut: "⇧⌘Z", run: () => temporal.redo() },
+    { id: "undo", label: "Undo", keywords: "undo revert", shortcut: "⌘Z", run: () => useDiagramStore.getState().undo() },
+    { id: "redo", label: "Redo", keywords: "redo", shortcut: "⇧⌘Z", run: () => useDiagramStore.getState().redo() },
     { id: "add-table", label: "Add table", keywords: "table create new", shortcut: "T", run: () => store.addTable() },
     { id: "add-note", label: "Add sticky note", keywords: "note sticky", shortcut: "N", run: () => store.addNote() },
     { id: "add-group", label: "Add group", keywords: "group folder", run: () => store.addGroup() },
