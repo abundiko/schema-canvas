@@ -64,7 +64,13 @@ function TableNodeInner({ data, selected }: NodeProps<TableNodeType>) {
       className="w-[240px] rounded-lg border border-border bg-white shadow-panel transition-shadow dark:bg-zinc-900"
       style={{
         boxShadow: selected
-          ? `0 0 0 2px ${table.color}, 0 0 18px ${hexToRgba(table.color, 0.45)}`
+          ? `0 0 0 2px ${table.color}, 0 0 0 6px ${hexToRgba(
+              table.color,
+              0.16,
+            )}, 0 0 20px ${hexToRgba(table.color, 0.7)}, 0 0 44px ${hexToRgba(
+              table.color,
+              0.4,
+            )}`
           : undefined,
       }}
       onDoubleClick={() => {
