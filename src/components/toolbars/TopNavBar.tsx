@@ -1,4 +1,4 @@
-import { ChevronDown, Database, FileCode2, FileJson, FileText, Image, Plus, Save, Settings, Share2 } from "lucide-react";
+import { ChevronDown, Database, FileCode2, FileJson, FileText, Image, Plus, Save, Settings } from "lucide-react";
 
 import { useDiagramStore } from "#/lib/store/diagramStore";
 import { useUiStore } from "#/lib/store/uiStore";
@@ -188,15 +188,6 @@ export function TopNavBar() {
             </>
           )}
         </Dropdown>
-
-        <button
-          type="button"
-          onClick={() => openDialog("share")}
-          className="flex h-8 items-center gap-1 rounded-md px-2 text-sm text-text-primary hover:bg-zinc-100 dark:hover:bg-zinc-800"
-        >
-          <Share2 size={13} className="text-text-faint" />
-          Share
-        </button>
 
         <button
           type="button"

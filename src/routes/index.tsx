@@ -7,7 +7,6 @@ import {
   FileDown,
   MousePointer2,
   PencilRuler,
-  Share2,
   Sparkles,
   Workflow,
 } from "lucide-react";
@@ -216,8 +215,8 @@ function Hero() {
             className="lnd-float-slow absolute -right-4 bottom-24 hidden items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-[11px] font-medium text-text-primary shadow-floating dark:bg-zinc-900 md:flex"
             style={{ ["--lnd-tilt" as string]: "2deg" }}
           >
-            <Share2 size={13} className="text-brand-500" />
-            Share a link to your diagram
+            <FileDown size={13} className="text-brand-500" />
+            Download SQL, DBML, or JSON
           </div>
           <div
             data-parallax="2"

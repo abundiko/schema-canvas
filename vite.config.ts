@@ -13,11 +13,7 @@ const config = defineConfig({
     devtools(),
     tailwindcss(),
     tanstackStart(),
-    nitro({
-      storage: {
-        share: { driver: "fs", base: ".data/share" },
-      },
-    }),
+    nitro(),
     viteReact(),
   ],
 })
