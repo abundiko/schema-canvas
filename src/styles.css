@@ -129,3 +129,88 @@ body {
   width: 0;
   height: 0;
 }
+
+/* ------------------------- landing page animations ------------------------- */
+
+@keyframes lnd-float {
+  0%, 100% { transform: translateY(0) rotate(var(--lnd-tilt, 0deg)); }
+  50% { transform: translateY(-10px) rotate(var(--lnd-tilt, 0deg)); }
+}
+@keyframes lnd-float-x {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  50% { transform: translateX(6px) translateY(-8px); }
+}
+@keyframes lnd-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes lnd-gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes lnd-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+@keyframes lnd-pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(99 102 241 / 0.35); }
+  50% { box-shadow: 0 0 0 14px rgb(99 102 241 / 0); }
+}
+@keyframes lnd-typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.lnd-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.lnd-reveal.lnd-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+.lnd-reveal[data-delay="1"] { transition-delay: 0.08s; }
+.lnd-reveal[data-delay="2"] { transition-delay: 0.16s; }
+.lnd-reveal[data-delay="3"] { transition-delay: 0.24s; }
+.lnd-reveal[data-delay="4"] { transition-delay: 0.32s; }
+
+.lnd-float { animation: lnd-float 6s ease-in-out infinite; }
+.lnd-float-slow { animation: lnd-float 9s ease-in-out infinite; }
+.lnd-float-x { animation: lnd-float-x 7s ease-in-out infinite; }
+.lnd-marquee { animation: lnd-marquee 30s linear infinite; }
+.lnd-gradient-text {
+  background-size: 200% 200%;
+  animation: lnd-gradient 6s ease-in-out infinite;
+}
+.lnd-caret::after {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 1.05em;
+  margin-left: 3px;
+  vertical-align: text-bottom;
+  background: var(--color-brand-500);
+  animation: lnd-blink 1s step-end infinite;
+}
+.lnd-pulse-glow { animation: lnd-pulse-glow 2.4s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lnd-float, .lnd-float-slow, .lnd-float-x, .lnd-marquee,
+  .lnd-gradient-text, .lnd-caret::after, .lnd-pulse-glow {
+    animation: none !important;
+  }
+  .lnd-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* dotted grid backdrop used across landing sections */
+.lnd-dots {
+  background-image: radial-gradient(currentColor 1px, transparent 1px);
+  background-size: 22px 22px;
+}
