@@ -162,6 +162,54 @@ describe("tabs", () => {
   });
 });
 
+describe("file library", () => {
+  it("keeps a closed tab in the file library", () => {
+    useDiagramStore.getState().reset();
+    const secondId = useDiagramStore.getState().addTab();
+    useDiagramStore.getState().switchTab(useDiagramStore.getState().tabs[0].id);
+    useDiagramStore.getState().closeTab(secondId);
+
+    const s = useDiagramStore.getState();
+    expect(s.tabs.map((t) => t.id)).not.toContain(secondId);
+    expect(s.files.map((f) => f.id)).toContain(secondId);
+  });
+
+  it("reopens a file from the library as a tab", () => {
+    useDiagramStore.getState().reset();
+    const secondId = useDiagramStore.getState().addTab();
+    useDiagramStore.getState().switchTab(useDiagramStore.getState().tabs[0].id);
+    useDiagramStore.getState().closeTab(secondId);
+
+    const file = useDiagramStore.getState().files.find((f) => f.id === secondId)!;
+    useDiagramStore.getState().openDiagram(file);
+
+    const s = useDiagramStore.getState();
+    expect(s.tabs.map((t) => t.id)).toContain(secondId);
+    expect(s.activeTabId).toBe(secondId);
+  });
+
+  it("deletes a file from the library permanently", () => {
+    useDiagramStore.getState().reset();
+    const secondId = useDiagramStore.getState().addTab();
+    useDiagramStore.getState().deleteFile(secondId);
+
+    const s = useDiagramStore.getState();
+    expect(s.files.map((f) => f.id)).not.toContain(secondId);
+    expect(s.tabs.map((t) => t.id)).not.toContain(secondId);
+  });
+
+  it("registerFile dedupes by id keeping the latest", () => {
+    useDiagramStore.getState().reset();
+    const s = useDiagramStore.getState();
+    const tab = s.tabs[0];
+    const updated = { ...tab, name: "Renamed", updatedAt: new Date().toISOString() };
+    s.registerFile(updated);
+    const files = useDiagramStore.getState().files;
+    expect(files).toHaveLength(1);
+    expect(files[0].name).toBe("Renamed");
+  });
+});
+
 describe("undo/redo history", () => {
   it("undoes and redoes table creation", () => {
     const store = useDiagramStore.getState();

@@ -35,8 +35,7 @@ export function useEditorShortcuts() {
         if (e.key.toLowerCase() === "s") {
           e.preventDefault();
           const s = useDiagramStore.getState();
-          void saveSession({ tabs: s.tabs, activeTabId: s.activeTabId });
-          useUiStore.getState().showNotice("Diagrams saved to this browser.");
+          void saveSession({ tabs: s.tabs, files: s.files, activeTabId: s.activeTabId });
           return;
         }
         if (/^[1-9]$/.test(e.key)) {

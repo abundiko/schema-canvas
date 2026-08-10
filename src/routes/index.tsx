@@ -112,8 +112,7 @@ function Home() {
       </section>
 
       <footer className="border-t border-border py-8 text-center text-xs text-text-faint">
-        SchemaCanvas — a DrawSQL-style clone for learning & prototyping. Not
-        affiliated with DrawSQL.
+        SchemaCanvas — a database design tool.
       </footer>
     </div>
   );

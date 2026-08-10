@@ -74,7 +74,7 @@ export function TopNavBar() {
 
   const saveNow = async () => {
     const s = useDiagramStore.getState();
-    await saveSession({ tabs: s.tabs, activeTabId: s.activeTabId });
+    await saveSession({ tabs: s.tabs, files: s.files, activeTabId: s.activeTabId });
     showNotice("Diagrams saved to this browser.");
   };
 
@@ -146,6 +146,14 @@ export function TopNavBar() {
                 }}
               >
                 <Plus size={14} /> New tab
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  close();
+                  openDialog("files");
+                }}
+              >
+                <FileText size={14} /> My files…
               </MenuItem>
               <MenuItem
                 onClick={() => {

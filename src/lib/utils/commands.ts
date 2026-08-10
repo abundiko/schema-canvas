@@ -23,6 +23,7 @@ export function getCommands(): Command[] {
 
   return [
     { id: "new", label: "New tab", keywords: "new diagram clear reset blank", run: () => store.addTab() },
+    { id: "files", label: "My files…", keywords: "files library open recent saved", run: () => ui.openDialog("files") },
     { id: "import-sql", label: "Import SQL…", keywords: "ddl create table import", run: () => ui.openDialog("import") },
     { id: "import-dbml", label: "Import DBML…", keywords: "dbml import dbml", run: () => ui.openDialog("importDbml") },
     { id: "export-sql", label: "Export SQL…", keywords: "sql ddl download", run: () => ui.openDialog("export") },

@@ -132,6 +132,8 @@ interface DiagramStoreState {
   diagram: Diagram;
   /** All open diagram tabs, in tab order. */
   tabs: Diagram[];
+  /** Persistent library of every diagram opened in this browser, so closed tabs can be reopened. */
+  files: Diagram[];
   activeTabId: string;
   canUndo: boolean;
   canRedo: boolean;
@@ -203,10 +205,12 @@ interface DiagramStoreState {
   closeTab: (tabId: string) => void;
   renameTab: (tabId: string, name: string) => void;
   openDiagram: (diagram: Diagram) => void;
-  replaceSession: (session: { tabs: Diagram[]; activeTabId: string }) => void;
+  replaceSession: (session: { tabs: Diagram[]; activeTabId: string; files?: Diagram[] }) => void;
   reset: () => void;
   undo: () => void;
   redo: () => void;
+  registerFile: (diagram: Diagram) => void;
+  deleteFile: (fileId: string) => void;
 }
 
 const initialTab = defaultDiagram();
@@ -233,8 +237,10 @@ export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
 
       // Keep `tabs` in sync with the active `diagram`.
       let tabs = patch.tabs ?? prev.tabs;
+      let files = patch.files ?? prev.files;
       if (patch.diagram) {
         tabs = tabs.map((t) => (t.id === patch.diagram?.id ? patch.diagram! : t));
+        files = files.map((f) => (f.id === patch.diagram?.id ? patch.diagram! : f));
       }
 
       // Derive `diagram` from the active tab unless the call already supplied one
@@ -253,6 +259,7 @@ export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
       return {
         ...patch,
         tabs,
+        files,
         diagram,
         activeTabId: nextActiveId,
         canUndo: h.past.length > 0,
@@ -267,6 +274,7 @@ export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
   return {
     diagram: initialTab,
     tabs: [initialTab],
+    files: [initialTab],
     activeTabId: initialTab.id,
     canUndo: false,
     canRedo: false,
@@ -947,6 +955,7 @@ export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
         const d = defaultDiagram(`Untitled diagram ${numbered.length + 1}`);
         set((st) => ({
           tabs: [...st.tabs, d],
+          files: [...st.files.filter((f) => f.id !== d.id), d],
           activeTabId: d.id,
           diagram: d,
           selection: { type: "none" },
@@ -965,13 +974,18 @@ export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
         set((s) => {
           if (s.tabs.length <= 1) return {};
           const index = s.tabs.findIndex((t) => t.id === tabId);
+          const closing = s.tabs.find((t) => t.id === tabId);
           const tabs = s.tabs.filter((t) => t.id !== tabId);
           histMap.delete(tabId);
           const viewports = { ...s.viewports };
           delete viewports[tabId];
-          if (s.activeTabId !== tabId) return { tabs, viewports };
+          // Keep the closed diagram in the persistent file library so it can be reopened.
+          const files = closing
+            ? [...s.files.filter((f) => f.id !== tabId), closing]
+            : s.files;
+          if (s.activeTabId !== tabId) return { tabs, files, viewports };
           const nextActive = tabs[Math.min(Math.max(index, 0), tabs.length - 1)];
-          return { tabs, viewports, activeTabId: nextActive.id, selection: { type: "none" } };
+          return { tabs, files, viewports, activeTabId: nextActive.id, selection: { type: "none" } };
         });
       },
 
@@ -989,17 +1003,19 @@ export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
       openDiagram: (diagram) =>
         set((s) => {
           const existing = s.tabs.find((t) => t.id === diagram.id);
-          if (existing) return { activeTabId: existing.id, selection: { type: "none" } };
+          const files = [...s.files.filter((f) => f.id !== diagram.id), { ...diagram, updatedAt: now() }];
+          if (existing) return { files, activeTabId: existing.id, selection: { type: "none" } };
           const d = { ...diagram, updatedAt: now() };
           return {
             tabs: [...s.tabs, d],
+            files,
             activeTabId: d.id,
             diagram: d,
             selection: { type: "none" },
           };
         }),
 
-      replaceSession: ({ tabs, activeTabId }) => {
+      replaceSession: ({ tabs, activeTabId, files }) => {
         const resolved = tabs.length ? tabs : [createBlankDiagram()];
         const id = resolved.some((t) => t.id === activeTabId)
           ? activeTabId
@@ -1009,6 +1025,7 @@ export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
         }
         set(() => ({
           tabs: resolved,
+          files: files && files.length ? files : resolved,
           activeTabId: id,
           diagram: resolved.find((t) => t.id === id)!,
           selection: { type: "none" },
@@ -1020,6 +1037,7 @@ export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
         const d: Diagram = { ...createBlankDiagram(), tables: [] };
         set(() => ({
           tabs: [d],
+          files: [d],
           activeTabId: d.id,
           diagram: d,
           selection: { type: "none" },
@@ -1027,6 +1045,34 @@ export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
           canRedo: false,
         }));
       },
+
+      registerFile: (diagram) =>
+        set((s) => ({
+          files: [...s.files.filter((f) => f.id !== diagram.id), diagram],
+        })),
+
+      deleteFile: (fileId) =>
+        set((s) => {
+          const tabs = s.tabs.filter((t) => t.id !== fileId);
+          if (tabs.length === 0) {
+            const d: Diagram = { ...createBlankDiagram(), tables: [] };
+            return {
+              tabs: [d],
+              files: s.files.filter((f) => f.id !== fileId),
+              activeTabId: d.id,
+              diagram: d,
+              selection: { type: "none" },
+            };
+          }
+          const activeTabId = s.tabs.some((t) => t.id === s.activeTabId && t.id !== fileId)
+            ? s.activeTabId
+            : tabs[0].id;
+          return {
+            tabs,
+            files: s.files.filter((f) => f.id !== fileId),
+            activeTabId,
+          };
+        }),
 
       /* ------------------------- per-tab undo/redo ------------------------- */
 

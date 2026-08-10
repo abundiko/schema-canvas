@@ -48,5 +48,5 @@ export function exportDiagramJson(diagram: Diagram): void {
 }
 
 export function exportLaravelMigrations(_diagram: Diagram): void {
-  // stretch goal — not implemented in v1
+  throw new Error("Laravel migrations export is not available in this build.");
 }

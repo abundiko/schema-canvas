@@ -1,17 +1,28 @@
 import { createServerFn } from "@tanstack/react-start";
+import { useStorage } from "nitro/storage";
 
-/**
- * Server-persisted share links are a stretch goal. In this build, sharing
- * encodes the diagram snapshot into the URL client-side, so this endpoint is
- * kept as a stub for a future persistence layer (TTL records mirroring
- * DrawSQL's "expire after 30 days of inactivity" behavior).
- */
+import type { Diagram } from "#/types/diagram";
+
+const SHARE_ID_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+function createShareId(): string {
+  const bytes = new Uint8Array(10);
+  crypto.getRandomValues(bytes);
+  let id = "";
+  for (const b of bytes) id += SHARE_ID_ALPHABET[b % SHARE_ID_ALPHABET.length];
+  return id;
+}
+
 export const createShareLink = createServerFn({ method: "POST" })
-  .validator((diagramId: string) => diagramId)
+  .validator((diagram: Diagram) => diagram)
   .handler(async ({ data }) => {
-    return {
-      id: `stub_${data}`,
-      ttlDays: 30,
-      note: "Server-persisted share records are not yet wired up.",
-    };
+    const id = createShareId();
+    await useStorage("share").setItem(id, data);
+    return { id };
+  });
+
+export const getShareLink = createServerFn({ method: "GET" })
+  .validator((id: string) => id)
+  .handler(async ({ data }) => {
+    return await useStorage<Diagram>("share").getItem(data);
   });

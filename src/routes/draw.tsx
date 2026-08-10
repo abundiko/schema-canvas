@@ -8,6 +8,7 @@ import { loadSession } from "#/lib/persistence/autosave";
 import { startAutosave } from "#/lib/persistence/hydrate";
 import { decodeDiagram } from "#/lib/utils/compress";
 import { useEditorShortcuts } from "#/lib/utils/useEditorShortcuts";
+import { consumeSharedDiagramOpened } from "#/lib/utils/sharedDiagram";
 import { registerExportRoot } from "#/lib/export/exportImage";
 import { DiagramCanvas } from "#/components/canvas/DiagramCanvas";
 import { TopNavBar } from "#/components/toolbars/TopNavBar";
@@ -20,6 +21,7 @@ import { ImportDdlDialog } from "#/components/dialogs/ImportDdlDialog";
 import { ImportDbmlDialog } from "#/components/dialogs/ImportDbmlDialog";
 import { ExportDialog } from "#/components/dialogs/ExportDialog";
 import { ShareDialog } from "#/components/dialogs/ShareDialog";
+import { FilesDialog } from "#/components/dialogs/FilesDialog";
 import { CommandPalette } from "#/components/dialogs/CommandPalette";
 import { ShortcutsDialog } from "#/components/dialogs/ShortcutsDialog";
 
@@ -54,6 +56,8 @@ function DrawPage() {
       if (shared) openDiagram(shared);
       return;
     }
+    // A diagram was just opened from a share link; don't clobber it with the session.
+    if (consumeSharedDiagramOpened()) return;
     void loadSession().then((saved) => {
       if (saved) replaceSession(saved);
     });
@@ -104,6 +108,7 @@ function DrawPage() {
       <ImportDbmlDialog />
       <ExportDialog />
       <ShareDialog />
+      <FilesDialog />
       <CommandPalette />
       <ShortcutsDialog />
     </div>
