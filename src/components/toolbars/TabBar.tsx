@@ -49,7 +49,7 @@ function TabName({ id, name }: { id: string; name: string }) {
         e.stopPropagation();
         setEditing(true);
       }}
-      className="max-w-40 truncate"
+      className="max-w-36 truncate"
     >
       {name}
     </span>
@@ -81,9 +81,9 @@ function TabItem({
         }
       }}
       className={cn(
-        "group flex h-8 min-w-0 max-w-56 cursor-pointer items-center gap-1.5 rounded-t-md border border-b-0 px-2.5 text-[11px] font-medium transition-colors",
+        "group flex h-7 min-w-0 max-w-48 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border px-2 text-[11px] font-medium transition-colors",
         active
-          ? "border-border bg-white text-text-primary shadow-[0_-1px_4px_rgba(0,0,0,0.04)] dark:bg-zinc-900"
+          ? "border-brand-300 bg-brand-50 text-text-primary dark:border-brand-500/40 dark:bg-brand-500/15"
           : "border-transparent text-text-muted hover:bg-zinc-100 hover:text-text-primary dark:hover:bg-zinc-800/70",
       )}
       onClick={onClick}
@@ -120,7 +120,7 @@ export function TabBar() {
     <div
       role="tablist"
       aria-label="Diagrams"
-      className="flex h-8 shrink-0 items-end gap-1 overflow-x-auto border-b border-border bg-canvas-bg px-2 dark:bg-panel-bg"
+      className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {tabs.map((tab) => (
         <TabItem
@@ -137,7 +137,7 @@ export function TabBar() {
         aria-label="New tab"
         title="New tab"
         onClick={addTab}
-        className="mb-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded text-text-muted hover:bg-zinc-200 hover:text-text-primary dark:hover:bg-zinc-800"
+        className="mb-0 flex h-6 w-6 shrink-0 items-center justify-center rounded text-text-muted hover:bg-zinc-200 hover:text-text-primary dark:hover:bg-zinc-800"
       >
         <Plus size={14} />
       </button>

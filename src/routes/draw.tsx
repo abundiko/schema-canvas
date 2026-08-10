@@ -12,7 +12,6 @@ import { consumeSharedDiagramOpened } from "#/lib/utils/sharedDiagram";
 import { registerExportRoot } from "#/lib/export/exportImage";
 import { DiagramCanvas } from "#/components/canvas/DiagramCanvas";
 import { TopNavBar } from "#/components/toolbars/TopNavBar";
-import { TabBar } from "#/components/toolbars/TabBar";
 import { CanvasToolSwitcher } from "#/components/toolbars/CanvasToolSwitcher";
 import { ViewportToolbar } from "#/components/toolbars/ViewportToolbar";
 import { AIPanel } from "#/components/toolbars/AIPanel";
@@ -22,6 +21,7 @@ import { ImportDbmlDialog } from "#/components/dialogs/ImportDbmlDialog";
 import { ExportDialog } from "#/components/dialogs/ExportDialog";
 import { ShareDialog } from "#/components/dialogs/ShareDialog";
 import { FilesDialog } from "#/components/dialogs/FilesDialog";
+import { SettingsDialog } from "#/components/dialogs/SettingsDialog";
 import { CommandPalette } from "#/components/dialogs/CommandPalette";
 import { ShortcutsDialog } from "#/components/dialogs/ShortcutsDialog";
 
@@ -72,7 +72,6 @@ function DrawPage() {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-canvas-bg">
       <TopNavBar />
-      <TabBar />
 
       <div className="flex min-h-0 flex-1">
         {!panelCollapsed && <InspectorPanel />}
@@ -109,6 +108,7 @@ function DrawPage() {
       <ExportDialog />
       <ShareDialog />
       <FilesDialog />
+      <SettingsDialog />
       <CommandPalette />
       <ShortcutsDialog />
     </div>

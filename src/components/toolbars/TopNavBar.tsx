@@ -1,63 +1,13 @@
-import { Check, ChevronDown, Database, FileCode2, FileJson, FileText, Image, Monitor, Moon, Plus, Save, Sun } from "lucide-react";
+import { ChevronDown, Database, FileCode2, FileJson, FileText, Image, Plus, Save, Settings, Share2 } from "lucide-react";
 
 import { useDiagramStore } from "#/lib/store/diagramStore";
-import { resolveTheme, useUiStore, type ThemeMode } from "#/lib/store/uiStore";
+import { useUiStore } from "#/lib/store/uiStore";
 import { exportSql, exportDbml, exportTs, exportMongoSchema, exportImage, exportDiagramJson } from "#/lib/export/exportActions";
 import { generateTableDdl } from "#/lib/ddl/generateDdl";
 import { DRIVERS, getDriver } from "#/lib/drivers";
 import { saveSession } from "#/lib/persistence/autosave";
+import { TabBar } from "#/components/toolbars/TabBar";
 import { Dropdown, MenuItem } from "#/components/ui";
-
-const THEME_OPTIONS: Array<{ value: ThemeMode; label: string; Icon: typeof Sun }> = [
-  { value: "light", label: "Light", Icon: Sun },
-  { value: "dark", label: "Dark", Icon: Moon },
-  { value: "system", label: "System", Icon: Monitor },
-];
-
-function ThemeSwitcher() {
-  const theme = useUiStore((s) => s.theme);
-  const setTheme = useUiStore((s) => s.setTheme);
-  const resolved = resolveTheme(theme);
-  const Icon = resolved === "dark" ? Moon : Sun;
-
-  return (
-    <Dropdown
-      width="w-40"
-      trigger={({ toggle }) => (
-        <button
-          type="button"
-          aria-label="Theme switcher"
-          title="Theme"
-          onClick={toggle}
-          className="flex h-8 items-center gap-1 rounded-md border border-border bg-white px-2 text-xs font-medium text-text-primary shadow-panel hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800"
-        >
-          <Icon size={14} className={theme === "dark" ? "text-accent-teal" : "text-amber-500"} />
-          <span className="hidden sm:inline">{theme === "system" ? "System" : resolved === "dark" ? "Dark" : "Light"}</span>
-        </button>
-      )}
-    >
-      {({ close }) => (
-        <>
-          {THEME_OPTIONS.map(({ value, label, Icon: OptionIcon }) => (
-            <MenuItem
-              key={value}
-              onClick={() => {
-                close();
-                setTheme(value);
-              }}
-            >
-              <span className="flex w-full items-center gap-2">
-                <OptionIcon size={14} className={value === "dark" ? "text-accent-teal" : "text-amber-500"} />
-                {label}
-                {theme === value && <Check size={14} className="ml-auto text-brand-500" />}
-              </span>
-            </MenuItem>
-          ))}
-        </>
-      )}
-    </Dropdown>
-  );
-}
 
 export function TopNavBar() {
   const diagram = useDiagramStore((s) => s.diagram);
@@ -116,13 +66,13 @@ export function TopNavBar() {
   };
 
   return (
-    <header className="relative flex h-12 shrink-0 items-center justify-between border-b border-border bg-white px-3 dark:bg-panel-bg">
-      <div className="flex items-center gap-1">
-        <a href="/" className="mr-1 flex items-center gap-1.5 text-sm font-bold text-text-primary">
+    <header className="relative flex h-12 shrink-0 items-center gap-2 border-b border-border bg-white px-3 dark:bg-panel-bg">
+      <div className="flex shrink-0 items-center gap-0.5">
+        <a href="/" className="mr-1 flex items-center gap-1.5 text-sm font-bold text-text-primary" title="Schemiwa">
           <span className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-500 text-white">
             <Database size={14} />
           </span>
-          Schemiwa
+          <span className="hidden lg:inline">Schemiwa</span>
         </a>
 
         <Dropdown
@@ -244,24 +194,35 @@ export function TopNavBar() {
           onClick={() => openDialog("share")}
           className="flex h-8 items-center gap-1 rounded-md px-2 text-sm text-text-primary hover:bg-zinc-100 dark:hover:bg-zinc-800"
         >
+          <Share2 size={13} className="text-text-faint" />
           Share
+        </button>
+
+        <button
+          type="button"
+          onClick={() => openDialog("settings")}
+          className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-zinc-100 hover:text-text-primary dark:hover:bg-zinc-800"
+          aria-label="Settings"
+          title="Settings"
+        >
+          <Settings size={14} />
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={() => useUiStore.getState().setShortcutsOpen(true)}
-        className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-md px-2 py-1 text-[11px] text-text-muted hover:bg-zinc-100 dark:hover:bg-zinc-800"
-        title="Show keyboard shortcuts"
-      >
-        <kbd className="flex h-4 min-w-4 items-center justify-center rounded border border-border bg-zinc-50 px-1 font-mono text-[10px] text-text-primary dark:bg-zinc-800">
-          ?
-        </kbd>
-        <span className="hidden sm:inline">Shortcuts</span>
-      </button>
+      <TabBar />
 
-      <div className="relative flex items-center gap-2">
-        <ThemeSwitcher />
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={() => useUiStore.getState().setShortcutsOpen(true)}
+          className="flex h-8 items-center gap-1 rounded-md px-2 text-xs text-text-muted hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          title="Show keyboard shortcuts"
+        >
+          <kbd className="flex h-4 min-w-4 items-center justify-center rounded border border-border bg-zinc-50 px-1 font-mono text-[10px] text-text-primary dark:bg-zinc-800">
+            ?
+          </kbd>
+          <span className="hidden sm:inline">Shortcuts</span>
+        </button>
 
         <Dropdown
           width="w-44"
@@ -301,3 +262,4 @@ export function TopNavBar() {
     </header>
   );
 }
+
