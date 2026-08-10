@@ -73,7 +73,7 @@ const generationSchema = z.object({
 const SWATCH_LIST =
   "#f87171, #fb923c, #fbbf24, #fde047, #a3e635, #4ade80, #2dd4bf, #22d3ee, #60a5fa, #818cf8, #a78bfa, #f472b6";
 
-const SYSTEM_PROMPT = `You are a senior database schema designer for a DrawSQL-style ER diagram tool.
+const SYSTEM_PROMPT = `You are a senior database schema designer for the Schemiwa ER diagram editor.
 The user will describe tables they want to add to an existing schema. Design new tables and
 relationships that fit naturally alongside the existing tables.
 

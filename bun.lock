@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "schemacanvas",
+      "name": "schemiwa",
       "dependencies": {
         "@ai-sdk/groq": "^4.0.24",
         "@tailwindcss/vite": "^4.1.18",

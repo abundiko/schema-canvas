@@ -42,7 +42,7 @@ function DrawPage() {
 
   // Reflect the active diagram's name in the browser tab title
   useEffect(() => {
-    document.title = `${diagramName} — SchemaCanvas`;
+    document.title = `${diagramName} — Schemiwa`;
   }, [diagramName]);
 
   useEffect(() => {

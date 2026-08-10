@@ -4,7 +4,7 @@ export type DialogKind = "none" | "import" | "importDbml" | "export" | "share" |
 
 export type ThemeMode = "light" | "dark" | "system";
 
-const THEME_STORAGE_KEY = "schemacanvas-theme";
+const THEME_STORAGE_KEY = "schemiwa-theme";
 
 function loadTheme(): ThemeMode {
   try {

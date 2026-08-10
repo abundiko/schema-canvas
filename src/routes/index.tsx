@@ -56,7 +56,7 @@ function Home() {
           <span className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-500 text-white">
             <Database size={15} />
           </span>
-          SchemaCanvas
+          Schemiwa
         </span>
         <Link
           to="/draw"
@@ -75,8 +75,8 @@ function Home() {
           </span>
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-text-muted">
-          A DrawSQL-style entity-relationship diagram editor that runs entirely in
-          your browser. Drop tables onto an infinite canvas, connect columns with
+          An entity-relationship diagram editor that runs entirely in your
+          browser. Drop tables onto an infinite canvas, connect columns with
           foreign keys, and export real SQL — no account, no install.
         </p>
         <div className="mt-8 flex items-center justify-center gap-3">
@@ -112,7 +112,7 @@ function Home() {
       </section>
 
       <footer className="border-t border-border py-8 text-center text-xs text-text-faint">
-        SchemaCanvas — a database design tool.
+        Schemiwa — a database design tool.
       </footer>
     </div>
   );

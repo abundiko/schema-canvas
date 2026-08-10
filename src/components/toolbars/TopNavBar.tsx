@@ -122,7 +122,7 @@ export function TopNavBar() {
           <span className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-500 text-white">
             <Database size={14} />
           </span>
-          SchemaCanvas
+          Schemiwa
         </a>
 
         <Dropdown

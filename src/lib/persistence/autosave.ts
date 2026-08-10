@@ -8,8 +8,8 @@ export interface SavedSession {
   activeTabId: string;
 }
 
-const SESSION_KEY = "schemacanvas:diagram:v2";
-const LEGACY_KEY = "schemacanvas:diagram:v1";
+const SESSION_KEY = "schemiwa:diagram:v2";
+const LEGACY_KEY = "schemiwa:diagram:v1";
 
 async function write(key: string, value: unknown): Promise<void> {
   try {
