@@ -1,253 +1,541 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode, type MouseEvent as ReactMouseEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
   Braces,
+  ChevronRight,
   Database,
   FileDown,
+  Layers,
   MousePointer2,
   PencilRuler,
   Sparkles,
   Workflow,
+  Zap,
 } from "lucide-react";
 
 import { cn } from "#/lib/utils/cn";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/")(  {
   component: Home,
 });
 
-/* ------------------------------ reveal hook ------------------------------- */
+/* ======================= hooks ============================================ */
+
+function useScrollProgress() {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const onScroll = () => {
+      const h = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(h > 0 ? Math.min(window.scrollY / h, 1) : 0);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return progress;
+}
+
+function useScrollDirection() {
+  const [dir, setDir] = useState<"up" | "down">("up");
+  const [scrolled, setScrolled] = useState(false);
+  const lastY = useRef(0);
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 20);
+      if (Math.abs(y - lastY.current) > 5) {
+        setDir(y > lastY.current ? "down" : "up");
+        lastY.current = y;
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return { dir, scrolled };
+}
+
+function useScrollLinked() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const onScroll = () => {
+      // Use how far the element has been scrolled off-screen relative to its height
+      const rect = el.getBoundingClientRect();
+      const h = el.offsetHeight || 1;
+      // 0 when at natural position, 1 when fully scrolled past
+      const raw = Math.max(0, -rect.top) / (h * 0.6);
+      setProgress(Math.max(0, Math.min(1, raw)));
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return { ref, progress };
+}
 
 function useReveal() {
   const ref = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
-
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true);
-          io.disconnect();
-        }
-      },
-      { threshold: 0.18, rootMargin: "0px 0px -40px 0px" },
+      ([entry]) => { if (entry.isIntersecting) { setInView(true); io.disconnect(); } },
+      { threshold: 0.15, rootMargin: "0px 0px -40px 0px" },
     );
     io.observe(el);
     return () => io.disconnect();
   }, []);
-
   return { ref, inView };
 }
 
-function Reveal({
-  children,
-  delay,
-  className,
-}: {
-  children: ReactNode;
-  delay?: string;
-  className?: string;
-}) {
+function Reveal({ children, delay, className }: { children: ReactNode; delay?: string; className?: string }) {
   const { ref, inView } = useReveal();
   return (
-    <div
-      ref={ref}
-      data-delay={delay}
-      className={cn("lnd-reveal", inView && "lnd-in", className)}
-    >
+    <div ref={ref} data-delay={delay} className={cn("lnd-reveal", inView && "lnd-in", className)}>
       {children}
     </div>
   );
 }
 
-/* ------------------------- hero mouse parallax hook ------------------------ */
-
 function useParallax(sensitivity = 12) {
   const ref = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const layers = el.querySelectorAll("[data-parallax]") as NodeListOf<HTMLElement>;
     if (!layers.length) return;
-
     const onMove = (e: MouseEvent) => {
-      const { innerWidth: w, innerHeight: h } = window;
-      const nx = e.clientX / w - 0.5;
-      const ny = e.clientY / h - 0.5;
+      const nx = e.clientX / window.innerWidth - 0.5;
+      const ny = e.clientY / window.innerHeight - 0.5;
       layers.forEach((layer) => {
-        const depth = Number(layer.dataset.parallax ?? 1);
-        const tx = nx * sensitivity * depth;
-        const ty = ny * sensitivity * depth;
-        layer.style.translate = `${tx}px ${ty}px`;
+        const d = Number(layer.dataset.parallax ?? 1);
+        layer.style.translate = `${nx * sensitivity * d}px ${ny * sensitivity * d}px`;
       });
     };
     window.addEventListener("mousemove", onMove);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      layers.forEach((l) => (l.style.translate = ""));
-    };
+    return () => { window.removeEventListener("mousemove", onMove); layers.forEach((l) => (l.style.translate = "")); };
   }, [sensitivity]);
-
   return ref;
 }
 
-/* --------------------------------- nav ----------------------------------- */
+function useCursorGlow() {
+  const onMouseMove = useCallback((e: ReactMouseEvent<HTMLElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty("--glow-x", `${e.clientX - r.left}px`);
+    e.currentTarget.style.setProperty("--glow-y", `${e.clientY - r.top}px`);
+  }, []);
+  return { onMouseMove };
+}
+
+/* Animated counter on scroll-into-view */
+function useCounter(target: number, duration = 1200) {
+  const [value, setValue] = useState(0);
+  const { ref, inView } = useReveal();
+
+  useEffect(() => {
+    if (!inView) return;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(eased * target));
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [inView, target, duration]);
+
+  return { ref, value };
+}
+
+/* ================================ NAV ===================================== */
 
 function Nav() {
+  const scrollProgress = useScrollProgress();
+  const { dir, scrolled } = useScrollDirection();
+
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 border-b border-border bg-white/80 backdrop-blur-md dark:bg-panel-bg/80">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-        <Link to="/" className="flex items-center gap-1.5 text-sm font-bold text-text-primary">
-          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-500 text-white">
-            <Database size={15} />
-          </span>
-          Schemiwa
-        </Link>
-        <Link
-          to="/draw"
-          className="flex h-9 items-center gap-1.5 rounded-md bg-brand-500 px-4 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-px hover:bg-brand-600"
-        >
-          Open editor <ArrowRight size={14} />
-        </Link>
-      </div>
-    </nav>
+    <>
+      <div className="lnd-progress-bar" style={{ transform: `scaleX(${scrollProgress})` }} />
+      <nav className={cn("lnd-nav", scrolled && dir === "down" && "lnd-nav-hidden", scrolled && "lnd-nav-scrolled")}>
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
+          <Link to="/" className="flex items-center gap-2 text-sm font-bold text-white">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 text-white">
+              <Database size={14} />
+            </span>
+            Schemiwa
+          </Link>
+          <div className="flex items-center gap-3">
+            <a href="#features" className="hidden text-sm font-medium text-[var(--lnd-text-muted)] transition-colors hover:text-white sm:block">
+              Features
+            </a>
+            <a href="#preview" className="hidden text-sm font-medium text-[var(--lnd-text-muted)] transition-colors hover:text-white sm:block">
+              Preview
+            </a>
+            <Link
+              to="/draw"
+              className="flex h-9 items-center gap-1.5 rounded-lg bg-white px-4 text-sm font-semibold text-zinc-900 transition-all hover:-translate-y-px hover:bg-zinc-100"
+            >
+              Open editor <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+      </nav>
+    </>
   );
 }
 
-/* ------------------------------ hero section ------------------------------ */
+/* ============================== SQL TYPING HERO =========================== */
+
+interface SqlToken {
+  text: string;
+  cls?: string;
+}
+
+const SQL_LINES: SqlToken[][] = [
+  [
+    { text: "CREATE", cls: "sql-kw" }, { text: " " }, { text: "TABLE", cls: "sql-kw" },
+    { text: " " }, { text: "`users`", cls: "sql-name" }, { text: " (", cls: "sql-punct" },
+  ],
+  [
+    { text: "  " }, { text: "`id`", cls: "sql-name" },
+    { text: "       ", }, { text: "INT", cls: "sql-type" },
+    { text: " " }, { text: "NOT NULL", cls: "sql-kw" },
+    { text: " " }, { text: "AUTO_INCREMENT", cls: "sql-kw" },
+    { text: ",", cls: "sql-punct" },
+  ],
+  [
+    { text: "  " }, { text: "`email`", cls: "sql-name" },
+    { text: "    " }, { text: "VARCHAR", cls: "sql-type" },
+    { text: "(", cls: "sql-punct" }, { text: "255", cls: "sql-num" },
+    { text: ")", cls: "sql-punct" }, { text: " " },
+    { text: "NOT NULL", cls: "sql-kw" }, { text: " " },
+    { text: "UNIQUE", cls: "sql-kw" }, { text: ",", cls: "sql-punct" },
+  ],
+  [
+    { text: "  " }, { text: "`name`", cls: "sql-name" },
+    { text: "     " }, { text: "VARCHAR", cls: "sql-type" },
+    { text: "(", cls: "sql-punct" }, { text: "100", cls: "sql-num" },
+    { text: ")", cls: "sql-punct" }, { text: ",", cls: "sql-punct" },
+  ],
+  [
+    { text: "  " }, { text: "`role`", cls: "sql-name" },
+    { text: "     " }, { text: "ENUM", cls: "sql-type" },
+    { text: "(", cls: "sql-punct" }, { text: "'admin'", cls: "sql-str" },
+    { text: ",", cls: "sql-punct" }, { text: "'user'", cls: "sql-str" },
+    { text: ")", cls: "sql-punct" }, { text: ",", cls: "sql-punct" },
+  ],
+  [
+    { text: "  " }, { text: "`created`", cls: "sql-name" },
+    { text: "  " }, { text: "DATETIME", cls: "sql-type" },
+    { text: " " }, { text: "DEFAULT", cls: "sql-kw" }, { text: " " },
+    { text: "NOW()", cls: "sql-kw" }, { text: ",", cls: "sql-punct" },
+  ],
+  [
+    { text: "  " }, { text: "PRIMARY KEY", cls: "sql-kw" },
+    { text: " (", cls: "sql-punct" }, { text: "`id`", cls: "sql-name" },
+    { text: ")", cls: "sql-punct" },
+  ],
+  [{ text: ");", cls: "sql-punct" }],
+];
+
+function SqlTypingEffect() {
+  const [visibleLines, setVisibleLines] = useState(0);
+
+  useEffect(() => {
+    let line = 0;
+    const interval = setInterval(() => {
+      line++;
+      setVisibleLines(line);
+      if (line >= SQL_LINES.length) clearInterval(interval);
+    }, 280);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="lnd-code-block p-5">
+      {/* Window chrome */}
+      <div className="mb-4 flex items-center gap-1.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+        <span className="ml-3 text-[11px] font-medium text-[var(--lnd-text-faint)]">schema.sql</span>
+      </div>
+      <pre className="m-0 overflow-x-auto text-[13px] leading-[1.8]">
+        <code>
+          {SQL_LINES.slice(0, visibleLines).map((line, li) => (
+            <div
+              key={li}
+              className="lnd-sql-line"
+              style={{ animationDelay: `${li * 0.05}s` }}
+            >
+              {line.map((token, ti) => (
+                <span key={ti} className={token.cls}>{token.text}</span>
+              ))}
+            </div>
+          ))}
+          {visibleLines < SQL_LINES.length && <span className="lnd-cursor" />}
+        </code>
+      </pre>
+    </div>
+  );
+}
 
 function Hero() {
   const parallaxRef = useParallax(14);
+  const { ref: scrollRef, progress } = useScrollLinked();
+  const heroOpacity = Math.max(0, 1 - progress * 2);
+  const heroY = -progress * 80;
 
   return (
-    <section ref={parallaxRef} className="relative overflow-hidden pt-14">
-      <div className="pointer-events-none absolute inset-0 text-zinc-200/70 opacity-70 dark:text-zinc-800/60 lnd-dots" />
+    <section ref={scrollRef} className="relative min-h-screen overflow-hidden pt-14">
+      {/* Dot grid background */}
+      <div className="pointer-events-none absolute inset-0 lnd-dots" />
+
+      {/* Gradient orbs */}
+      <div ref={parallaxRef} className="pointer-events-none absolute inset-0">
+        <div data-parallax="3" className="lnd-orb-1 absolute -left-32 top-32 h-96 w-96 rounded-full bg-brand-500/20 blur-[100px]" />
+        <div data-parallax="-2" className="lnd-orb-2 absolute -right-24 top-48 h-80 w-80 rounded-full bg-accent-teal/15 blur-[80px]" />
+        <div data-parallax="1" className="absolute left-1/2 top-0 h-64 w-64 -translate-x-1/2 rounded-full bg-brand-500/10 blur-[60px]" />
+      </div>
+
+      {/* Content */}
       <div
-        data-parallax="4"
-        className="pointer-events-none absolute -left-24 top-24 h-72 w-72 rounded-full bg-brand-500/15 blur-3xl"
-      />
-      <div
-        data-parallax="-3"
-        className="pointer-events-none absolute -right-20 top-40 h-80 w-80 rounded-full bg-accent-teal/15 blur-3xl"
-      />
+        className="lnd-hero-content relative mx-auto flex max-w-6xl flex-col items-center gap-12 px-6 pb-20 pt-24 lg:flex-row lg:items-start lg:gap-16 lg:pt-32"
+        style={{ opacity: heroOpacity, transform: `translateY(${heroY}px)` }}
+      >
+        {/* Left — Copy */}
+        <div className="flex-1 text-center lg:text-left">
+          <Reveal>
+            <div className="mx-auto mb-6 flex w-fit items-center gap-2 rounded-full border border-[var(--lnd-border)] bg-[rgba(255,255,255,0.04)] px-3.5 py-1.5 text-[12px] font-medium text-[var(--lnd-text-muted)] lg:mx-0">
+              <Zap size={12} className="text-brand-500" />
+              Free &middot; No signup &middot; 100% browser
+            </div>
+          </Reveal>
 
-      <div className="relative mx-auto max-w-6xl px-6 pb-16 pt-20 text-center sm:pt-28">
-        <Reveal>
-          <div className="mx-auto mb-6 flex w-fit items-center gap-2 rounded-full border border-border bg-white px-3 py-1 text-[11px] font-medium text-text-muted shadow-panel dark:bg-zinc-900">
-            <Sparkles size={12} className="text-brand-500" />
-            Free · No account · Runs in your browser
-          </div>
-        </Reveal>
+          <Reveal delay="1">
+            <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
+              Design your schema visually,{" "}
+              <span className="lnd-gradient-text">export real SQL</span>.
+            </h1>
+          </Reveal>
 
-        <Reveal delay="1">
-          <h1 className="mx-auto max-w-4xl text-4xl font-bold leading-tight tracking-tight sm:text-6xl">
-            Design databases like you{"'"}re{" "}
-            <span className="lnd-gradient-text bg-gradient-to-r from-brand-500 via-accent-teal to-brand-500 bg-clip-text text-transparent">
-              sketching
-            </span>
-            .
-          </h1>
-        </Reveal>
+          <Reveal delay="2">
+            <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--lnd-text-muted)] lg:mx-0">
+              Schemiwa is an ER diagram editor with an infinite canvas, live SQL
+              generation, and browser autosave. Think in tables, ship in code —
+              nothing to install.
+            </p>
+          </Reveal>
 
-        <Reveal delay="2">
-          <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-text-muted">
-            Schemiwa is an entity-relationship diagram editor with an infinite
-            canvas, live SQL exports and browser autosave. Think in tables, ship
-            in schema — no account, no install.
-          </p>
-        </Reveal>
+          <Reveal delay="3">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+              <CtaButton to="/draw">
+                Start drawing <ArrowRight size={15} />
+              </CtaButton>
+              <a
+                href="#features"
+                className="flex h-11 items-center gap-2 rounded-lg border border-[var(--lnd-border)] px-5 text-sm font-semibold text-[var(--lnd-text)] transition-all hover:-translate-y-0.5 hover:border-[var(--lnd-border-strong)] hover:bg-[rgba(255,255,255,0.04)]"
+              >
+                See features <ChevronRight size={14} />
+              </a>
+            </div>
+          </Reveal>
+        </div>
 
-        <Reveal delay="3">
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              to="/draw"
-              className="lnd-pulse-glow flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-600"
+        {/* Right — SQL typing */}
+        <Reveal delay="3" className="w-full max-w-lg flex-shrink-0 lg:w-[440px]">
+          <div className="relative">
+            {/* Floating nodes */}
+            <div
+              data-parallax="3"
+              className="lnd-float absolute -left-6 -top-4 z-10 hidden items-center gap-2 rounded-lg border border-[var(--lnd-border)] bg-[var(--lnd-surface)] px-3 py-1.5 text-[11px] font-medium text-[var(--lnd-text)] shadow-lg lg:flex"
+              style={{ ["--lnd-tilt" as string]: "-1deg" }}
             >
-              Start drawing <ArrowRight size={15} />
-            </Link>
-            <a
-              href="#features"
-              className="flex h-11 items-center gap-2 rounded-lg border border-border bg-white px-6 text-sm font-semibold text-text-primary shadow-panel transition-all hover:-translate-y-0.5 hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+              <Workflow size={12} className="text-accent-teal" />
+              users → orders
+            </div>
+            <div
+              data-parallax="-2"
+              className="lnd-float-slow absolute -bottom-3 -right-4 z-10 hidden items-center gap-2 rounded-lg border border-[var(--lnd-border)] bg-[var(--lnd-surface)] px-3 py-1.5 text-[11px] font-medium text-[var(--lnd-text)] shadow-lg lg:flex"
+              style={{ ["--lnd-tilt" as string]: "1.5deg" }}
             >
-              See what it does
-            </a>
+              <Database size={12} className="text-brand-500" />
+              MySQL
+            </div>
+            <SqlTypingEffect />
           </div>
         </Reveal>
       </div>
-
-      {/* parallax product mock */}
-      <Reveal delay="4" className="relative mx-auto max-w-6xl px-6 pb-20">
-        <div
-          className="group relative overflow-hidden rounded-xl border border-border bg-white shadow-floating dark:bg-panel-bg"
-          style={{ perspective: "1200px" }}
-        >
-          <div
-            data-parallax="2"
-            className="absolute left-3 top-3 z-10 hidden items-center gap-1.5 rounded-md border border-border bg-white px-2 py-1 text-[10px] font-medium text-text-muted shadow-panel dark:bg-zinc-900 sm:flex"
-          >
-            <Database size={11} className="text-brand-500" />
-            Schemiwa — E-commerce store
-          </div>
-          <div className="aspect-[16/10] w-full overflow-hidden bg-canvas-bg">
-            <img
-              src="/shot-editor.png"
-              alt="Schemiwa editor with a diagram of an e-commerce schema"
-              loading="eager"
-              className="h-full w-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.03]"
-            />
-          </div>
-
-          {/* floating feature chips */}
-          <div
-            data-parallax="3"
-            className="lnd-float absolute -left-4 top-16 hidden items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-[11px] font-medium text-text-primary shadow-floating dark:bg-zinc-900 md:flex"
-            style={{ ["--lnd-tilt" as string]: "-2deg" }}
-          >
-            <Workflow size={13} className="text-accent-teal" />
-            Drag columns to draw foreign keys
-          </div>
-          <div
-            data-parallax="-3"
-            className="lnd-float-slow absolute -right-4 bottom-24 hidden items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-[11px] font-medium text-text-primary shadow-floating dark:bg-zinc-900 md:flex"
-            style={{ ["--lnd-tilt" as string]: "2deg" }}
-          >
-            <FileDown size={13} className="text-brand-500" />
-            Download SQL, DBML, or JSON
-          </div>
-          <div
-            data-parallax="2"
-            className="lnd-float-x absolute -bottom-5 left-1/2 hidden -translate-x-1/2 items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-[11px] font-medium text-text-primary shadow-floating dark:bg-zinc-900 md:flex"
-          >
-            <Sparkles size={13} className="text-amber-500" />
-            Autosaves as you type
-          </div>
-        </div>
-      </Reveal>
     </section>
   );
 }
 
-/* ----------------------------- marquee strip ------------------------------ */
-
-const DRIVERS = ["MySQL", "PostgreSQL", "SQL Server", "MariaDB", "MongoDB"];
-
-function DriverMarquee() {
-  const items = [...DRIVERS, ...DRIVERS, ...DRIVERS];
+/* ---- CTA button with cursor glow ---- */
+function CtaButton({ children, to }: { children: ReactNode; to: string }) {
+  const { onMouseMove } = useCursorGlow();
   return (
-    <section className="border-y border-border bg-white py-6 dark:bg-panel-bg">
-      <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-white to-transparent dark:from-panel-bg" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-white to-transparent dark:from-panel-bg" />
-        <div className="lnd-marquee flex w-max items-center gap-10 whitespace-nowrap">
-          {items.map((d, i) => (
-            <span key={`${d}-${i}`} className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-text-faint">
-              <Database size={13} className="text-brand-500/70" />
-              {d}
+    <Link
+      to={to}
+      onMouseMove={onMouseMove}
+      className="lnd-cursor-glow lnd-pulse-glow flex h-11 items-center gap-2 rounded-lg bg-brand-500 px-6 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-600"
+    >
+      <span className="relative z-[1] flex items-center gap-2">{children}</span>
+    </Link>
+  );
+}
+
+/* =========================== METRICS STRIP ================================ */
+
+interface Metric {
+  value: number;
+  suffix: string;
+  label: string;
+  Icon: typeof Database;
+}
+
+const METRICS: Metric[] = [
+  { value: 5, suffix: "", label: "SQL drivers supported", Icon: Database },
+  { value: 6, suffix: "", label: "Export formats", Icon: FileDown },
+  { value: 0, suffix: "", label: "Signups required", Icon: Zap },
+  { value: 100, suffix: "%", label: "Browser-based", Icon: Layers },
+];
+
+function MetricCard({ metric }: { metric: Metric }) {
+  const { ref, value } = useCounter(metric.value, 1000);
+  const { Icon } = metric;
+  return (
+    <div ref={ref} className="flex flex-col items-center gap-2 px-6 py-6 text-center">
+      <Icon size={18} className="text-brand-500" />
+      <span className="lnd-counter-value text-3xl sm:text-4xl">
+        {value}{metric.suffix}
+      </span>
+      <span className="text-sm font-medium text-[var(--lnd-text-muted)]">{metric.label}</span>
+    </div>
+  );
+}
+
+function MetricsStrip() {
+  return (
+    <section className="border-y border-[var(--lnd-border)] bg-[var(--lnd-bg-subtle)]">
+      <div className="mx-auto grid max-w-5xl grid-cols-2 divide-x divide-[var(--lnd-border)] sm:grid-cols-4">
+        {METRICS.map((m) => (
+          <Reveal key={m.label}>
+            <MetricCard metric={m} />
+          </Reveal>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ============================= BENTO GRID ================================= */
+
+interface BentoCard {
+  Icon: typeof Workflow;
+  kicker: string;
+  title: string;
+  description: string;
+  shot: string;
+  shotAlt: string;
+  iconColor: string;
+}
+
+const BENTO_CARDS: BentoCard[] = [
+  {
+    Icon: Workflow,
+    kicker: "Infinite canvas",
+    title: "Drop tables, draw keys",
+    description: "Create tables, drag columns to connect foreign keys, and watch ER edges appear with cardinality markers. Pan, zoom, snap to grid.",
+    shot: "/shot-canvas.png",
+    shotAlt: "Schemiwa infinite canvas",
+    iconColor: "text-accent-teal",
+  },
+  {
+    Icon: PencilRuler,
+    kicker: "Inspector",
+    title: "Precise column editing",
+    description: "Full inspector for types, nullability, primary/unique keys, auto-increment, and composite indexes — validated per SQL driver.",
+    shot: "/shot-inspector.png",
+    shotAlt: "Schemiwa inspector panel",
+    iconColor: "text-brand-500",
+  },
+  {
+    Icon: FileDown,
+    kicker: "Import & export",
+    title: "From DDL to real SQL",
+    description: "Paste CREATE TABLE scripts to auto-populate diagrams. Export driver-accurate SQL, DBML, TypeScript types, JSON, or PNG.",
+    shot: "/shot-export.png",
+    shotAlt: "Schemiwa export dialog",
+    iconColor: "text-amber-400",
+  },
+  {
+    Icon: Sparkles,
+    kicker: "AI-powered",
+    title: "Schema reviews by AI",
+    description: "Get instant AI-powered feedback on normalization, naming conventions, missing indexes, and relationship design.",
+    shot: "/shot-editor.png",
+    shotAlt: "Schemiwa AI review",
+    iconColor: "text-purple-400",
+  },
+];
+
+function BentoFeature({ card }: { card: BentoCard }) {
+  const { Icon } = card;
+  return (
+    <div className="lnd-glass lnd-glow-border group flex flex-col p-6 sm:p-8">
+      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(255,255,255,0.05)] ring-1 ring-[var(--lnd-border)]">
+        <Icon size={20} className={card.iconColor} />
+      </div>
+      <span className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-[var(--lnd-text-faint)]">
+        {card.kicker}
+      </span>
+      <h3 className="mb-2 text-lg font-bold text-[var(--lnd-text)]">{card.title}</h3>
+      <p className="mb-5 flex-1 text-sm leading-relaxed text-[var(--lnd-text-muted)]">
+        {card.description}
+      </p>
+      <div className="overflow-hidden rounded-lg border border-[var(--lnd-border)]">
+        <img
+          src={card.shot}
+          alt={card.shotAlt}
+          loading="lazy"
+          className="lnd-bento-img aspect-[16/10] w-full object-cover object-top"
+        />
+      </div>
+    </div>
+  );
+}
+
+function BentoGrid() {
+  return (
+    <section id="features" className="relative py-20 sm:py-28">
+      <div className="pointer-events-none absolute inset-0 lnd-grid" />
+      <div className="relative mx-auto max-w-6xl px-6">
+        <Reveal>
+          <div className="mb-12 text-center">
+            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-[var(--lnd-border)] bg-[rgba(255,255,255,0.03)] px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-[var(--lnd-text-faint)]">
+              <MousePointer2 size={11} className="text-brand-500" />
+              Features
             </span>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+              Everything you need to design schemas
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-[var(--lnd-text-muted)]">
+              A complete toolkit that runs entirely in your browser — no backend, no account, no install.
+            </p>
+          </div>
+        </Reveal>
+
+        <div className="lnd-bento">
+          {BENTO_CARDS.map((card, i) => (
+            <Reveal key={card.kicker} delay={String(i + 1)}>
+              <BentoFeature card={card} />
+            </Reveal>
           ))}
         </div>
       </div>
@@ -255,121 +543,133 @@ function DriverMarquee() {
   );
 }
 
-/* ------------------------------ feature rows ------------------------------ */
+/* =========================== CODE PREVIEW ================================= */
 
-interface FeatureSpec {
-  kicker: string;
-  title: string;
-  body: string;
-  bullets: string[];
-  shot: string;
-  shotAlt: string;
-  chip: ReactNode;
-  chipClass?: string;
-  Icon: typeof Workflow;
-  accent: string;
-}
-
-const FEATURES: FeatureSpec[] = [
+const CODE_TABS = [
   {
-    kicker: "Infinite canvas",
-    title: "Drop tables, draw keys, stay in flow",
-    body: "A blank canvas that never runs out of room. Create tables, drag columns onto each other to build foreign keys, and watch cardinality markers appear as you connect.",
-    bullets: [
-      "Live ER edges with one-to-one, one-to-many and many-to-many markers",
-      "Drag-to-pan, zoom with the wheel or trackpad, grid snapping",
-      "Sticky notes and color-coded groups to annotate your design",
-    ],
-    shot: "/shot-canvas.png",
-    shotAlt: "Schemiwa infinite canvas with a products and categories diagram",
-    chip: <><MousePointer2 size={13} /> Drag from a column dot to connect</>,
-    Icon: Workflow,
-    accent: "from-brand-500/15 to-accent-teal/10",
+    label: "SQL",
+    lang: "sql",
+    content: [
+      [{ text: "CREATE", cls: "sql-kw" }, { text: " " }, { text: "TABLE", cls: "sql-kw" }, { text: " " }, { text: "`products`", cls: "sql-name" }, { text: " (", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "`id`", cls: "sql-name" }, { text: "          " }, { text: "INT", cls: "sql-type" }, { text: " " }, { text: "NOT NULL", cls: "sql-kw" }, { text: " " }, { text: "AUTO_INCREMENT", cls: "sql-kw" }, { text: ",", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "`name`", cls: "sql-name" }, { text: "        " }, { text: "VARCHAR", cls: "sql-type" }, { text: "(", cls: "sql-punct" }, { text: "255", cls: "sql-num" }, { text: ")", cls: "sql-punct" }, { text: " " }, { text: "NOT NULL", cls: "sql-kw" }, { text: ",", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "`price`", cls: "sql-name" }, { text: "       " }, { text: "DECIMAL", cls: "sql-type" }, { text: "(", cls: "sql-punct" }, { text: "10", cls: "sql-num" }, { text: ",", cls: "sql-punct" }, { text: "2", cls: "sql-num" }, { text: ")", cls: "sql-punct" }, { text: ",", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "`category_id`", cls: "sql-name" }, { text: " " }, { text: "INT", cls: "sql-type" }, { text: ",", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "PRIMARY KEY", cls: "sql-kw" }, { text: " (", cls: "sql-punct" }, { text: "`id`", cls: "sql-name" }, { text: ")", cls: "sql-punct" }],
+      [{ text: ");", cls: "sql-punct" }],
+    ] as SqlToken[][],
   },
   {
-    kicker: "Inspector",
-    title: "Columns, types and keys — precise",
-    body: "Every table has a full inspector for column types, nullability, primary/unique/index keys, auto-increment and composite indexes — validated against the active SQL driver.",
-    bullets: [
-      "Driver-aware type picker (MySQL, PostgreSQL, SQL Server, MariaDB)",
-      "Inline add/duplicate/delete and column reordering",
-      "Composite indexes with per-column sort order",
-    ],
-    shot: "/shot-inspector.png",
-    shotAlt: "Schemiwa inspector panel editing a users table",
-    chip: <><PencilRuler size={13} /> Edit columns in the inspector</>,
-    Icon: PencilRuler,
-    accent: "from-accent-teal/15 to-brand-500/10",
+    label: "DBML",
+    lang: "dbml",
+    content: [
+      [{ text: "Table", cls: "sql-kw" }, { text: " " }, { text: "products", cls: "sql-name" }, { text: " {", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "id", cls: "sql-name" }, { text: "          " }, { text: "int", cls: "sql-type" }, { text: " [", cls: "sql-punct" }, { text: "pk", cls: "sql-kw" }, { text: ", ", cls: "sql-punct" }, { text: "increment", cls: "sql-kw" }, { text: "]", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "name", cls: "sql-name" }, { text: "        " }, { text: "varchar", cls: "sql-type" }, { text: "(", cls: "sql-punct" }, { text: "255", cls: "sql-num" }, { text: ")", cls: "sql-punct" }, { text: " [", cls: "sql-punct" }, { text: "not null", cls: "sql-kw" }, { text: "]", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "price", cls: "sql-name" }, { text: "       " }, { text: "decimal", cls: "sql-type" }, { text: "(", cls: "sql-punct" }, { text: "10,2", cls: "sql-num" }, { text: ")", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "category_id", cls: "sql-name" }, { text: " " }, { text: "int", cls: "sql-type" }],
+      [{ text: "}", cls: "sql-punct" }],
+    ] as SqlToken[][],
   },
   {
-    kicker: "Import & export",
-    title: "From DDL to real SQL, both ways",
-    body: "Paste a CREATE TABLE script and get a populated diagram with inferred foreign keys. Then export driver-accurate DDL, DBML, TypeScript types, JSON or a PNG snapshot.",
-    bullets: [
-      "Import from SQL DDL or DBML",
-      "Export SQL, DBML, TypeScript types, JSON and PNG",
-      "Per-table DDL copy for the table you have selected",
-    ],
-    shot: "/shot-export.png",
-    shotAlt: "Schemiwa export dialog with generated SQL preview",
-    chip: <><Braces size={13} /> Export driver-accurate SQL</>,
-    Icon: FileDown,
-    accent: "from-amber-400/15 to-accent-rose/10",
+    label: "TypeScript",
+    lang: "ts",
+    content: [
+      [{ text: "interface", cls: "sql-kw" }, { text: " " }, { text: "Product", cls: "sql-name" }, { text: " {", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "id", cls: "sql-name" }, { text: ":          " }, { text: "number", cls: "sql-type" }, { text: ";", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "name", cls: "sql-name" }, { text: ":        " }, { text: "string", cls: "sql-type" }, { text: ";", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "price", cls: "sql-name" }, { text: ":       " }, { text: "number", cls: "sql-type" }, { text: ";", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "category_id", cls: "sql-name" }, { text: ": " }, { text: "number", cls: "sql-type" }, { text: " | " }, { text: "null", cls: "sql-kw" }, { text: ";", cls: "sql-punct" }],
+      [{ text: "}", cls: "sql-punct" }],
+    ] as SqlToken[][],
+  },
+  {
+    label: "JSON",
+    lang: "json",
+    content: [
+      [{ text: "{", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "\"table\"", cls: "sql-name" }, { text: ": ", cls: "sql-punct" }, { text: "\"products\"", cls: "sql-str" }, { text: ",", cls: "sql-punct" }],
+      [{ text: "  " }, { text: "\"columns\"", cls: "sql-name" }, { text: ": [", cls: "sql-punct" }],
+      [{ text: "    { " }, { text: "\"name\"", cls: "sql-name" }, { text: ": ", cls: "sql-punct" }, { text: "\"id\"", cls: "sql-str" }, { text: ", ", cls: "sql-punct" }, { text: "\"type\"", cls: "sql-name" }, { text: ": ", cls: "sql-punct" }, { text: "\"INT\"", cls: "sql-str" }, { text: " },", cls: "sql-punct" }],
+      [{ text: "    { " }, { text: "\"name\"", cls: "sql-name" }, { text: ": ", cls: "sql-punct" }, { text: "\"name\"", cls: "sql-str" }, { text: ", ", cls: "sql-punct" }, { text: "\"type\"", cls: "sql-name" }, { text: ": ", cls: "sql-punct" }, { text: "\"VARCHAR(255)\"", cls: "sql-str" }, { text: " }", cls: "sql-punct" }],
+      [{ text: "  ]", cls: "sql-punct" }],
+      [{ text: "}", cls: "sql-punct" }],
+    ] as SqlToken[][],
   },
 ];
 
-function FeatureRow({ spec, flip }: { spec: FeatureSpec; flip?: boolean }) {
-  const { Icon } = spec;
+function CodePreview() {
+  const [activeTab, setActiveTab] = useState(0);
+  const tab = CODE_TABS[activeTab];
+
   return (
-    <section className="mx-auto max-w-6xl px-6 py-16">
-      <div className={cn("grid items-center gap-10 lg:grid-cols-2", flip && "lg:[&>*:first-child]:order-2")}>
+    <section id="preview" className="relative py-20 sm:py-28">
+      <div className="relative mx-auto max-w-6xl px-6">
         <Reveal>
-          <div className="space-y-4">
-            <span className="flex w-fit items-center gap-1.5 rounded-md border border-border bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-text-muted shadow-panel dark:bg-zinc-900">
-              <Icon size={12} className="text-brand-500" />
-              {spec.kicker}
+          <div className="mb-10 text-center">
+            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-[var(--lnd-border)] bg-[rgba(255,255,255,0.03)] px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-[var(--lnd-text-faint)]">
+              <Braces size={11} className="text-accent-teal" />
+              Export
             </span>
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{spec.title}</h2>
-            <p className="leading-relaxed text-text-muted">{spec.body}</p>
-            <ul className="space-y-2">
-              {spec.bullets.map((b) => (
-                <li key={b} className="flex items-start gap-2 text-sm text-text-muted">
-                  <span className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm bg-brand-100 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400">
-                    <svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden>
-                      <path d="M2 5.2 4.2 7.4 8 2.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </span>
-                  {b}
-                </li>
-              ))}
-            </ul>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+              One diagram, every format
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-[var(--lnd-text-muted)]">
+              Design visually, export as driver-accurate SQL, DBML, TypeScript types, or JSON — one click.
+            </p>
           </div>
         </Reveal>
 
         <Reveal delay="1">
-          <div className="group relative">
-            <div className={cn("absolute -inset-3 rounded-2xl bg-gradient-to-br blur-xl", spec.accent)} />
-            <div className="relative overflow-hidden rounded-xl border border-border bg-white shadow-floating dark:bg-panel-bg">
-              <div className="flex items-center gap-1.5 border-b border-border px-3 py-2">
-                <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+          <div className="mx-auto max-w-2xl">
+            {/* Tabs */}
+            <div className="mb-3 flex items-center gap-1 rounded-lg border border-[var(--lnd-border)] bg-[rgba(255,255,255,0.02)] p-1">
+              {CODE_TABS.map((t, i) => (
+                <button
+                  key={t.label}
+                  type="button"
+                  onClick={() => setActiveTab(i)}
+                  className={cn("lnd-code-tab flex-1", i === activeTab && "lnd-code-tab-active")}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Code block */}
+            <div className="lnd-code-block p-5">
+              <div className="mb-3 flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+                <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+                <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+                <span className="ml-3 text-[11px] font-medium text-[var(--lnd-text-faint)]">
+                  output.{tab.lang}
+                </span>
               </div>
-              <img
-                src={spec.shot}
-                alt={spec.shotAlt}
-                loading="lazy"
-                className="aspect-[16/10] w-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.03]"
-              />
+              <pre className="m-0 overflow-x-auto text-[13px] leading-[1.8]">
+                <code>
+                  {tab.content.map((line: SqlToken[], li: number) => (
+                    <div key={`${activeTab}-${li}`} className="lnd-sql-line" style={{ animationDelay: `${li * 0.04}s` }}>
+                      {line.map((token: SqlToken, ti: number) => (
+                        <span key={ti} className={token.cls}>{token.text}</span>
+                      ))}
+                    </div>
+                  ))}
+                </code>
+              </pre>
             </div>
-            <div
-              className={cn(
-                "lnd-float absolute -bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-border bg-white px-3 py-1.5 text-[11px] font-medium text-text-primary shadow-floating dark:bg-zinc-900",
-                spec.chipClass,
-              )}
-            >
-              {spec.chip}
-            </div>
+          </div>
+        </Reveal>
+
+        {/* Full product screenshot */}
+        <Reveal delay="2" className="mt-16">
+          <div className="lnd-screenshot mx-auto max-w-5xl">
+            <img
+              src="/shot-editor.png"
+              alt="Schemiwa editor with a full e-commerce schema diagram"
+              loading="lazy"
+              className="w-full"
+            />
           </div>
         </Reveal>
       </div>
@@ -377,68 +677,87 @@ function FeatureRow({ spec, flip }: { spec: FeatureSpec; flip?: boolean }) {
   );
 }
 
-/* ------------------------------ CTA + footer ------------------------------ */
+/* ================================= CTA ==================================== */
 
-function Cta() {
+function GradientCta() {
+  const { ref, inView } = useReveal();
+  const { onMouseMove } = useCursorGlow();
+
   return (
-    <section className="relative overflow-hidden border-t border-border py-24">
-      <div className="pointer-events-none absolute inset-0 text-zinc-200/70 opacity-70 dark:text-zinc-800/60 lnd-dots" />
-      <div className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-500/15 blur-3xl" />
+    <section ref={ref} className="lnd-cta-mesh relative overflow-hidden py-28 sm:py-36">
+      {/* Expanding glow */}
+      <div className={cn("lnd-cta-glow", inView && "lnd-glow-active")} />
+      <div className="pointer-events-none absolute inset-0 lnd-dots" />
+
       <div className="relative mx-auto max-w-3xl px-6 text-center">
         <Reveal>
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Open the editor and draw your first table
+          <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">
+            Your schema, your browser,{" "}
+            <span className="lnd-gradient-text">your SQL</span>.
           </h2>
         </Reveal>
+
         <Reveal delay="1">
-          <p className="mx-auto mt-4 max-w-xl text-text-muted">
-            Nothing to install, nothing to sign up for. Your work autosaves to
-            your browser and exports to real SQL.
+          <p className="mx-auto mt-5 max-w-xl text-lg text-[var(--lnd-text-muted)]">
+            Nothing to install, nothing to sign up for. Your work autosaves
+            locally and exports to real, production-ready code.
           </p>
         </Reveal>
+
         <Reveal delay="2">
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-9 flex flex-col items-center gap-4">
             <Link
               to="/draw"
-              className="lnd-pulse-glow flex h-12 items-center gap-2 rounded-lg bg-brand-500 px-8 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-brand-600"
+              onMouseMove={onMouseMove}
+              className="lnd-cursor-glow lnd-pulse-glow flex h-13 items-center gap-2.5 rounded-xl bg-brand-500 px-8 text-base font-semibold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:bg-brand-600"
             >
-              <Database size={15} /> Start drawing
+              <span className="relative z-[1] flex items-center gap-2.5">
+                <Database size={16} />
+                Open the editor
+                <ArrowRight size={16} />
+              </span>
             </Link>
+            <span className="flex items-center gap-2 text-sm text-[var(--lnd-text-faint)]">
+              or press <kbd className="lnd-kbd">⌘</kbd> <kbd className="lnd-kbd">N</kbd> in the editor to create a table
+            </span>
           </div>
         </Reveal>
       </div>
     </section>
   );
 }
+
+/* ================================ FOOTER ================================== */
 
 function Footer() {
   return (
-    <footer className="border-t border-border py-10 text-center text-xs text-text-faint">
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-6 sm:flex-row sm:justify-between">
-        <span className="flex items-center gap-1.5 font-semibold text-text-primary">
+    <footer className="border-t border-[var(--lnd-border)] py-10">
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-6 text-sm sm:flex-row sm:justify-between">
+        <span className="flex items-center gap-2 font-semibold text-[var(--lnd-text)]">
           <span className="flex h-5 w-5 items-center justify-center rounded bg-brand-500 text-white">
             <Database size={11} />
           </span>
           Schemiwa
         </span>
-        <span>Schemiwa — a database design tool.</span>
+        <span className="text-[var(--lnd-text-faint)]">
+          A free, browser-based database design tool.
+        </span>
       </div>
     </footer>
   );
 }
 
+/* ================================ HOME ==================================== */
+
 function Home() {
   return (
-    <div className="min-h-screen bg-canvas-bg text-text-primary">
+    <div className="lnd-dark min-h-screen">
       <Nav />
       <Hero />
-      <DriverMarquee />
-      <div id="features" className="py-8">
-        {FEATURES.map((f, i) => (
-          <FeatureRow key={f.title} spec={f} flip={i % 2 === 1} />
-        ))}
-      </div>
-      <Cta />
+      <MetricsStrip />
+      <BentoGrid />
+      <CodePreview />
+      <GradientCta />
       <Footer />
     </div>
   );
