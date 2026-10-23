@@ -1,21 +1,61 @@
-import type { Diagram } from "#/types/diagram";
+import type { Diagram, TableEntity } from "#/types/diagram";
 
 export type LayoutMode = "grid" | "force";
 
-const GRID_X = 320;
-const GRID_Y = 260;
+/** Horizontal gap between table columns in the grid. */
+const GAP_X = 80;
+/** Vertical gap between table rows in the grid. */
+const GAP_Y = 40;
+/** Fixed table node width (matches w-[240px] in TableNode). */
+const TABLE_W = 240;
+/** Table header height (h-8 = 32px). */
+const HEADER_H = 32;
+/** Per-column row height (h-[26px]). */
+const COL_ROW_H = 26;
+/** Composite-index section vertical padding. */
+const INDEX_SECTION_PAD = 12; // py-1.5 top+bottom
+/** Per composite-index row height. */
+const INDEX_ROW_H = 18;
+/** Border + rounding overhead. */
+const BORDER_EXTRA = 2;
+
+/** Estimate the rendered pixel height of a table node. */
+function tableHeight(t: TableEntity): number {
+  let h = HEADER_H + t.columns.length * COL_ROW_H + BORDER_EXTRA;
+  if (t.indexes.length > 0) {
+    h += INDEX_SECTION_PAD + t.indexes.length * INDEX_ROW_H;
+  }
+  return h;
+}
 
 function gridPositions(diagram: Diagram): Map<string, { x: number; y: number }> {
   const tables = [...diagram.tables].sort((a, b) => a.name.localeCompare(b.name));
   const n = tables.length;
+  if (n === 0) return new Map();
+
   const cols = Math.max(1, Math.ceil(Math.sqrt(n)));
+  const cellW = TABLE_W + GAP_X;
+
+  // Split tables into rows so we can compute per-row max height.
+  const rows: TableEntity[][] = [];
+  for (let i = 0; i < n; i += cols) {
+    rows.push(tables.slice(i, i + cols));
+  }
+
   const positions = new Map<string, { x: number; y: number }>();
-  tables.forEach((t, i) => {
-    positions.set(t.id, {
-      x: (i % cols) * GRID_X,
-      y: Math.floor(i / cols) * GRID_Y,
-    });
-  });
+  let y = 0;
+
+  for (const row of rows) {
+    let maxH = 0;
+    for (let c = 0; c < row.length; c++) {
+      const t = row[c];
+      const h = tableHeight(t);
+      if (h > maxH) maxH = h;
+      positions.set(t.id, { x: c * cellW, y });
+    }
+    y += maxH + GAP_Y;
+  }
+
   return positions;
 }
 

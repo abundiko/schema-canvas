@@ -108,7 +108,7 @@ function TableNodeInner({ data, selected }: NodeProps<TableNodeType>) {
       </div>
 
       {/* columns */}
-      <div className="no-scrollbar max-h-[420px] overflow-y-auto overflow-x-hidden px-2.5">
+      <div className="overflow-x-hidden px-2.5">
         {columns.map((col) => (
           <div
             key={col.id}
