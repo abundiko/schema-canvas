@@ -113,6 +113,10 @@ function TableNodeInner({ data, selected }: NodeProps<TableNodeType>) {
           <div
             key={col.id}
             className="group relative flex h-[26px] items-center gap-1 border-b border-border/60 px-2 text-[12px] last:border-b-0 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              data.onFocusColumn(table.id, col.id);
+            }}
           >
             <Handle
               type="target"

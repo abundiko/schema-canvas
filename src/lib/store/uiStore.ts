@@ -11,7 +11,15 @@ export type DialogKind =
 
 export type ThemeMode = "light" | "dark" | "system";
 
+export type ColumnFocusRequest = {
+  tableId: string;
+  columnId: string;
+  nonce: number;
+};
+
 const THEME_STORAGE_KEY = "schemiwa-theme";
+
+let columnFocusNonce = 0;
 
 function loadTheme(): ThemeMode {
   try {
@@ -34,6 +42,7 @@ interface UiState {
   theme: ThemeMode;
   commandPaletteOpen: boolean;
   shortcutsOpen: boolean;
+  columnFocusRequest: ColumnFocusRequest | null;
   openDialog: (dialog: DialogKind) => void;
   closeDialog: () => void;
   setAiOpen: (open: boolean) => void;
@@ -43,6 +52,8 @@ interface UiState {
   setTheme: (theme: ThemeMode) => void;
   setCommandPaletteOpen: (open: boolean) => void;
   setShortcutsOpen: (open: boolean) => void;
+  requestColumnFocus: (tableId: string, columnId: string) => void;
+  clearColumnFocus: () => void;
 }
 
 let noticeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -56,6 +67,7 @@ export const useUiStore = create<UiState>()((set) => ({
   theme: loadTheme(),
   commandPaletteOpen: false,
   shortcutsOpen: false,
+  columnFocusRequest: null,
   openDialog: (dialog) => set({ dialog }),
   closeDialog: () => set({ dialog: "none" }),
   setAiOpen: (aiOpen) => set({ aiOpen }),
@@ -76,6 +88,11 @@ export const useUiStore = create<UiState>()((set) => ({
   },
   setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
   setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
+  requestColumnFocus: (tableId, columnId) =>
+    set({
+      columnFocusRequest: { tableId, columnId, nonce: ++columnFocusNonce },
+    }),
+  clearColumnFocus: () => set({ columnFocusRequest: null }),
 }));
 
 export function resolveTheme(mode: ThemeMode): "light" | "dark" {

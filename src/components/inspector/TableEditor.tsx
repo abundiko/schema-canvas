@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import { useDiagramStore } from "#/lib/store/diagramStore";
+import { useUiStore } from "#/lib/store/uiStore";
 import type { TableEntity } from "#/types/diagram";
 import { sortedColumns, sortedIndexes } from "#/lib/store/selectors";
 import { TABLE_SWATCHES } from "#/lib/utils/palettes";
@@ -16,12 +17,18 @@ export function TableEditor({ table }: { table: TableEntity }) {
   const addCompositeIndex = useDiagramStore((s) => s.addCompositeIndex);
   const reorderColumn = useDiagramStore((s) => s.reorderColumn);
   const reorderCompositeIndex = useDiagramStore((s) => s.reorderCompositeIndex);
+  const columnFocusRequest = useUiStore((s) => s.columnFocusRequest);
+  const clearColumnFocus = useUiStore((s) => s.clearColumnFocus);
 
   const columns = sortedColumns(table);
   const indexes = sortedIndexes(table);
   const dragColumnId = useRef<string | null>(null);
   const dragIndexId = useRef<string | null>(null);
   const [focusColumnId, setFocusColumnId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (columnFocusRequest?.tableId === table.id) clearColumnFocus();
+  }, [columnFocusRequest, table.id, clearColumnFocus]);
 
   const handleAddColumn = () => {
     const id = addColumn(table.id);
@@ -55,6 +62,12 @@ export function TableEditor({ table }: { table: TableEntity }) {
               tableId={table.id}
               column={col}
               autoFocus={col.id === focusColumnId}
+              focusToken={
+                columnFocusRequest?.tableId === table.id &&
+                columnFocusRequest.columnId === col.id
+                  ? columnFocusRequest.nonce
+                  : undefined
+              }
               draggable
               onDragStart={() => (dragColumnId.current = col.id)}
               onDrop={() => {

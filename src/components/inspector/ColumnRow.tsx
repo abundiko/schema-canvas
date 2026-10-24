@@ -12,6 +12,7 @@ export function ColumnRow({
   tableId,
   column,
   autoFocus,
+  focusToken,
   onDragStart,
   onDrop,
   draggable,
@@ -19,6 +20,7 @@ export function ColumnRow({
   tableId: string;
   column: Column;
   autoFocus?: boolean;
+  focusToken?: number;
   onDragStart: () => void;
   onDrop: () => void;
   draggable: boolean;
@@ -30,11 +32,10 @@ export function ColumnRow({
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (autoFocus) {
-      nameInputRef.current?.focus();
-      nameInputRef.current?.select();
-    }
-  }, [autoFocus]);
+    if (!autoFocus && focusToken === undefined) return;
+    nameInputRef.current?.focus();
+    nameInputRef.current?.select();
+  }, [autoFocus, focusToken]);
 
   const spec = getDriver(driver).typeMap.get(column.type.toLowerCase());
   const supportsParams = spec?.params === "length" || spec?.params === "precision-scale";

@@ -166,6 +166,12 @@ function DiagramCanvasInner() {
   const handleTableRename = useCallback((tableId: string, name: string) => {
     useDiagramStore.getState().updateTable(tableId, { name });
   }, []);
+  const handleColumnFocus = useCallback((tableId: string, columnId: string) => {
+    const store = useDiagramStore.getState();
+    store.setSelection({ type: "table", tableId });
+    if (store.panelCollapsed) store.setPanelCollapsed(false);
+    useUiStore.getState().requestColumnFocus(tableId, columnId);
+  }, []);
   const handleGroupResizeCommit = useCallback((groupId: string, bounds: Group["bounds"]) => {
     useDiagramStore.getState().updateGroup(groupId, { bounds });
   }, []);
@@ -201,6 +207,7 @@ function DiagramCanvasInner() {
         data: {
           table: t,
           onRename: handleTableRename,
+          onFocusColumn: handleColumnFocus,
           autoFocusName: autoFocusId === t.id,
         },
         zIndex: 1,
@@ -235,7 +242,7 @@ function DiagramCanvasInner() {
       });
     }
     return { nodes, edges };
-  }, [diagram, autoFocusId, selection, handleTableRename, handleGroupResizeCommit, handleNoteResizeCommit]);
+  }, [diagram, autoFocusId, selection, handleTableRename, handleColumnFocus, handleGroupResizeCommit, handleNoteResizeCommit]);
 
   /* ---------------- sync store → RF (skipped mid-drag) ---------------- */
   useEffect(() => {

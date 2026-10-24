@@ -4,6 +4,7 @@ import type { Node, Edge } from "@xyflow/react";
 export type TableNodeData = {
   table: TableEntity;
   onRename: (tableId: string, name: string) => void;
+  onFocusColumn: (tableId: string, columnId: string) => void;
   autoFocusName?: boolean;
 };
 
