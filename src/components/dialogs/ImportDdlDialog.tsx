@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileUp, TriangleAlert, ClipboardPaste } from "lucide-react";
 
 import { useDiagramStore } from "#/lib/store/diagramStore";
@@ -29,6 +29,11 @@ export function ImportDdlDialog() {
   const [duplicateMode, setDuplicateMode] = useState<DuplicateMode>("keep-both");
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [imported, setImported] = useState(false);
+
+  useEffect(() => {
+    if (open) setImported(false);
+  }, [open]);
 
   if (!open) return null;
 
@@ -39,6 +44,7 @@ export function ImportDdlDialog() {
     setDriver("auto");
     setResult(null);
     setError(null);
+    setImported(false);
   };
 
   const runImport = () => {
@@ -172,6 +178,7 @@ export function ImportDdlDialog() {
       relationships: relationships.length - diagram.relationships.length,
       warnings,
     });
+    setImported(true);
   };
 
   return (
@@ -201,6 +208,8 @@ export function ImportDdlDialog() {
           onChange={(e) => {
             setSql(e.target.value);
             setResult(null);
+            setError(null);
+            setImported(false);
           }}
           rows={8}
           placeholder="CREATE TABLE `users` ( ... );"
@@ -212,7 +221,11 @@ export function ImportDdlDialog() {
             <Select
               ariaLabel="Driver"
               value={driver}
-              onChange={(v) => setDriver(v as Driver | "auto")}
+              onChange={(v) => {
+                setDriver(v as Driver | "auto");
+                setResult(null);
+                setImported(false);
+              }}
               options={[
                 { value: "auto", label: "Auto-detect" },
                 ...DRIVERS.map((d: DriverConfig) => ({
@@ -226,7 +239,11 @@ export function ImportDdlDialog() {
             <Select
               ariaLabel="Duplicate handling"
               value={duplicateMode}
-              onChange={(v) => setDuplicateMode(v as DuplicateMode)}
+              onChange={(v) => {
+                setDuplicateMode(v as DuplicateMode);
+                setResult(null);
+                setImported(false);
+              }}
               options={[
                 { value: "keep-both", label: "Keep both (rename new)" },
                 { value: "overwrite", label: "Overwrite existing" },
@@ -275,7 +292,7 @@ export function ImportDdlDialog() {
           <Button variant="subtle" onClick={closeDialog}>
             Close
           </Button>
-          <Button variant="primary" onClick={runImport}>
+          <Button variant="primary" onClick={runImport} disabled={imported}>
             Import into diagram
           </Button>
         </div>

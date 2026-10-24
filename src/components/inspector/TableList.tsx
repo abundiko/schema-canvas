@@ -22,6 +22,15 @@ export function TableList() {
     emitCanvasEvent({ type: "fit-to-node", nodeId: id });
   };
 
+  const handleNewTable = () => {
+    const id = addTable();
+    if (id) {
+      setTimeout(() => {
+        emitCanvasEvent({ type: "fit-to-node", nodeId: id });
+      }, 50);
+    }
+  };
+
   const handleCreateGroup = () => {
     const store = useDiagramStore.getState();
     if (selection.type !== "tables" || selection.tableIds.length === 0) return;
@@ -53,7 +62,7 @@ export function TableList() {
         <h2 className="text-xs font-semibold uppercase tracking-wide text-text-muted">
           Tables
         </h2>
-        <Button variant="ghost" onClick={() => addTable()} className="!h-6 !px-1.5 text-xs text-accent-teal hover:!text-teal-600">
+        <Button variant="ghost" onClick={handleNewTable} className="!h-6 !px-1.5 text-xs text-accent-teal hover:!text-teal-600">
           <Plus size={12} /> New
         </Button>
       </div>

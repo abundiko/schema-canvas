@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ClipboardPaste, FileUp, TriangleAlert } from "lucide-react";
 
 import { useDiagramStore } from "#/lib/store/diagramStore";
@@ -22,6 +22,11 @@ export function ImportDbmlDialog() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [imported, setImported] = useState(false);
+
+  useEffect(() => {
+    if (open) setImported(false);
+  }, [open]);
 
   if (!open) return null;
 
@@ -31,6 +36,7 @@ export function ImportDbmlDialog() {
     setFileName(file.name);
     setResult(null);
     setError(null);
+    setImported(false);
   };
 
   const runImport = () => {
@@ -61,6 +67,7 @@ export function ImportDbmlDialog() {
       relationships: parsed.relationships.length,
       warnings: parsed.warnings,
     });
+    setImported(true);
   };
 
   return (
@@ -95,6 +102,8 @@ export function ImportDbmlDialog() {
           onChange={(e) => {
             setDbml(e.target.value);
             setResult(null);
+            setError(null);
+            setImported(false);
           }}
           rows={10}
           placeholder={`Table users {\n  id integer [pk, increment]\n  email varchar(255) [not null, unique]\n}\n\nTable posts {\n  id integer [pk]\n  author_id integer\n}\n\nRef: posts.author_id > users.id`}
@@ -129,7 +138,7 @@ export function ImportDbmlDialog() {
           <Button variant="subtle" onClick={closeDialog}>
             Close
           </Button>
-          <Button variant="primary" onClick={runImport}>
+          <Button variant="primary" onClick={runImport} disabled={imported}>
             Import into diagram
           </Button>
         </div>

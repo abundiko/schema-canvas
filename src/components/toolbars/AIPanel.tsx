@@ -7,6 +7,7 @@ import { generateSchemaFromPrompt, type AiGenerateResult } from "#/server/functi
 import { reviewSchema, type ReviewSuggestion } from "#/server/functions/reviewSchema";
 import { lintDiagram, severityOrder } from "#/lib/lint/lint";
 import { createId } from "#/lib/utils/ids";
+import { normalizeImportedTableColors } from "#/lib/utils/palettes";
 import type { Column, Relationship, TableEntity } from "#/types/diagram";
 import { Button } from "#/components/ui";
 import { cn } from "#/lib/utils/cn";
@@ -109,7 +110,10 @@ export function AIPanel() {
 
     store.setDiagram({
       ...diagram,
-      tables: [...diagram.tables, ...newTables],
+      tables: [
+        ...diagram.tables,
+        ...normalizeImportedTableColors(newTables),
+      ],
       relationships: [...diagram.relationships, ...relationships],
       updatedAt: new Date().toISOString(),
     });

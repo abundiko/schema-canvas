@@ -89,7 +89,7 @@ function DiagramCanvasInner() {
   const isSelectingRef = useRef(false);
   const pendingSelectionRef = useRef<Selection | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const { screenToFlowPosition, zoomIn, zoomOut, setViewport, fitView, getViewport } =
+  const { screenToFlowPosition, zoomIn, zoomOut, setViewport, fitView, getViewport, getNodes } =
     useReactFlow();
   const gridVisible = useUiStore((s) => s.gridVisible);
   const setZoom = useUiStore((s) => s.setZoom);
@@ -121,9 +121,17 @@ function DiagramCanvasInner() {
         case "fit-view":
           fitView({ padding: 0.5, maxZoom: 1.25 });
           break;
-        case "fit-to-node":
-          fitView({ nodes: [{ id: e.nodeId }], padding: 1.2, maxZoom: 1.5 });
+        case "fit-to-node": {
+          const doFit = () => {
+            fitView({ nodes: [{ id: e.nodeId }], padding: 1.2, maxZoom: 1.5, duration: 250 });
+          };
+          if (getNodes().some((n) => n.id === e.nodeId)) {
+            doFit();
+          } else {
+            setTimeout(doFit, 60);
+          }
           break;
+        }
         case "zoom-in":
           zoomIn({ duration: 120 });
           break;

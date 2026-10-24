@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useDiagramStore } from "#/lib/store/diagramStore";
+import { TABLE_SWATCHES } from "#/lib/utils/palettes";
+import type { Diagram } from "#/types/diagram";
 
 beforeEach(() => {
   useDiagramStore.getState().reset();
@@ -20,6 +22,26 @@ describe("diagramStore", () => {
     expect(table.id).toBe(id);
     expect(table.columns).toHaveLength(1);
     expect(table.columns[0].keyType).toBe("primary");
+  });
+
+  it("gives each new table a random color and selects it", () => {
+    const store = useDiagramStore.getState();
+    const firstId = store.addTable();
+    const first = useDiagramStore
+      .getState()
+      .diagram.tables.find((t) => t.id === firstId)!;
+    expect((TABLE_SWATCHES as readonly string[]).includes(first.color)).toBe(true);
+    expect(useDiagramStore.getState().selection).toEqual({
+      type: "table",
+      tableId: firstId,
+    });
+
+    const secondId = store.addTable();
+    const second = useDiagramStore
+      .getState()
+      .diagram.tables.find((t) => t.id === secondId)!;
+    expect((TABLE_SWATCHES as readonly string[]).includes(second.color)).toBe(true);
+    expect(second.color).not.toBe(first.color);
   });
 
   it("adds columns and keeps order", () => {
@@ -196,6 +218,46 @@ describe("file library", () => {
     const s = useDiagramStore.getState();
     expect(s.files.map((f) => f.id)).not.toContain(secondId);
     expect(s.tabs.map((t) => t.id)).not.toContain(secondId);
+  });
+
+  it("randomizes uniform colors when opening an imported diagram", () => {
+    useDiagramStore.getState().reset();
+    const base = useDiagramStore.getState().diagram;
+    const imported: Diagram = {
+      ...base,
+      id: "imported",
+      name: "Imported",
+      tables: [
+        { id: "t1", name: "a", color: "#f87171", position: { x: 0, y: 0 }, columns: [], indexes: [] },
+        { id: "t2", name: "b", color: "#f87171", position: { x: 300, y: 0 }, columns: [], indexes: [] },
+        { id: "t3", name: "c", color: "#f87171", position: { x: 600, y: 0 }, columns: [], indexes: [] },
+      ],
+    };
+
+    useDiagramStore.getState().openDiagram(imported);
+
+    const colors = useDiagramStore.getState().diagram.tables.map((t) => t.color);
+    expect(new Set(colors).size).toBeGreaterThan(1);
+  });
+
+  it("keeps varied colors when opening an imported diagram", () => {
+    useDiagramStore.getState().reset();
+    const base = useDiagramStore.getState().diagram;
+    const imported: Diagram = {
+      ...base,
+      id: "imported-varied",
+      name: "Imported varied",
+      tables: [
+        { id: "t1", name: "a", color: "#f87171", position: { x: 0, y: 0 }, columns: [], indexes: [] },
+        { id: "t2", name: "b", color: "#60a5fa", position: { x: 300, y: 0 }, columns: [], indexes: [] },
+      ],
+    };
+
+    useDiagramStore.getState().openDiagram(imported);
+
+    expect(
+      useDiagramStore.getState().diagram.tables.map((t) => t.color),
+    ).toEqual(["#f87171", "#60a5fa"]);
   });
 
   it("registerFile dedupes by id keeping the latest", () => {

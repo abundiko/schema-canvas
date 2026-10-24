@@ -17,6 +17,7 @@ import { AIPanel } from "#/components/toolbars/AIPanel";
 import { InspectorPanel } from "#/components/inspector/InspectorPanel";
 import { ImportDdlDialog } from "#/components/dialogs/ImportDdlDialog";
 import { ImportDbmlDialog } from "#/components/dialogs/ImportDbmlDialog";
+import { ImportJsonDialog } from "#/components/dialogs/ImportJsonDialog";
 import { ExportDialog } from "#/components/dialogs/ExportDialog";
 import { FilesDialog } from "#/components/dialogs/FilesDialog";
 import { SettingsDialog } from "#/components/dialogs/SettingsDialog";
@@ -101,6 +102,7 @@ function DrawPage() {
 
       <ImportDdlDialog />
       <ImportDbmlDialog />
+      <ImportJsonDialog />
       <ExportDialog />
       <FilesDialog />
       <SettingsDialog />

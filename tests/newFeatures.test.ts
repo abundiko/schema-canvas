@@ -4,6 +4,10 @@ import { generateDbml } from "#/lib/dbml/generateDbml";
 import { parseDbml } from "#/lib/dbml/parseDbml";
 import { lintDiagram, severityOrder } from "#/lib/lint/lint";
 import { layoutDiagram } from "#/lib/layout/autoLayout";
+import {
+  TABLE_SWATCHES,
+  normalizeImportedTableColors,
+} from "#/lib/utils/palettes";
 import type { Diagram } from "#/types/diagram";
 
 function fixture(): Diagram {
@@ -140,6 +144,76 @@ Ref: invoices.customer_id > customers.id
 Table t { id serial [pk] }`;
     const parsed = parseDbml(dbml);
     expect(parsed.driver).toBe("postgresql");
+  });
+
+  it("gives each imported table a random color when colors are absent", () => {
+    const dbml = `
+Table a { id int [pk] }
+Table b { id int [pk] }
+Table c { id int [pk] }
+`;
+    const parsed = parseDbml(dbml);
+    const colors = parsed.tables.map((t) => t.color);
+    expect(
+      colors.every((c) => (TABLE_SWATCHES as readonly string[]).includes(c)),
+    ).toBe(true);
+    expect(new Set(colors).size).toBeGreaterThan(1);
+  });
+
+  it("randomizes colors when every imported table shares one color", () => {
+    const dbml = `
+Table a [headercolor: #f87171] { id int [pk] }
+Table b [headercolor: #f87171] { id int [pk] }
+Table c [headercolor: #f87171] { id int [pk] }
+`;
+    const parsed = parseDbml(dbml);
+    expect(new Set(parsed.tables.map((t) => t.color)).size).toBeGreaterThan(1);
+  });
+
+  it("preserves varied imported table colors", () => {
+    const dbml = `
+Table a [headercolor: #f87171] { id int [pk] }
+Table b [headercolor: #60a5fa] { id int [pk] }
+`;
+    const parsed = parseDbml(dbml);
+    expect(parsed.tables.map((t) => t.color)).toEqual(["#f87171", "#60a5fa"]);
+  });
+});
+
+describe("imported table colors", () => {
+  const table = (id: string, color?: string) => ({
+    id,
+    name: id,
+    color,
+  });
+
+  it("keeps varied colors and the original objects", () => {
+    const tables = [table("a", "#f87171"), table("b", "#60a5fa")];
+    expect(normalizeImportedTableColors(tables)).toBe(tables);
+  });
+
+  it("fills missing colors with distinct swatches", () => {
+    const tables = [
+      table("a", "#f87171"),
+      table("b"),
+      table("c", "   "),
+    ];
+    const result = normalizeImportedTableColors(tables);
+    expect(result[0].color).toBe("#f87171");
+    expect(result[1].color).toBeTruthy();
+    expect(result[2].color).toBeTruthy();
+    expect(result[1].color).not.toBe(result[2].color);
+  });
+
+  it("randomizes a uniform color across multiple tables", () => {
+    const tables = [table("a", "#f87171"), table("b", "#f87171")];
+    const result = normalizeImportedTableColors(tables);
+    expect(new Set(result.map((t) => t.color)).size).toBeGreaterThan(1);
+  });
+
+  it("leaves a single table's imported color alone", () => {
+    const tables = [table("a", "#f87171")];
+    expect(normalizeImportedTableColors(tables)).toBe(tables);
   });
 });
 

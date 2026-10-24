@@ -9,6 +9,10 @@ import type {
 } from "#/types/diagram";
 import { createId } from "#/lib/utils/ids";
 import { classifyDefault } from "#/lib/utils/defaults";
+import {
+  getRandomTableColor,
+  normalizeImportedTableColors,
+} from "#/lib/utils/palettes";
 
 export interface ParsedDbml {
   driver: Driver;
@@ -69,10 +73,20 @@ function parseSettings(raw: string): Map<string, string> {
   return map;
 }
 
-function parseTableBlock(block: string, tableId: string, warnings: string[]): TableEntity | null {
-  const nameMatch = block.match(/^Table\s+([^\s{]+)\s*\{/);
-  if (!nameMatch) return null;
-  const tableName = nameMatch[1];
+function parseTableBlock(
+  block: string,
+  tableId: string,
+  warnings: string[],
+  fallbackColor?: string,
+): TableEntity | null {
+  const headerMatch = block.match(
+    /^Table\s+(?:("[^"]+"|'[^']+'|`[^`]+`|[^\s{\[]+))(?:\s+as\s+[^\s{\[]+)?(?:\s*\[(.*?)\])?\s*\{/i,
+  );
+  if (!headerMatch) return null;
+  const tableName = unquote(headerMatch[1]);
+  const headerSettings = parseSettings(headerMatch[2] ?? "");
+  const importedColor = headerSettings.get("headercolor") || headerSettings.get("color");
+  const color = importedColor ? unquote(importedColor) : (fallbackColor ?? getRandomTableColor());
 
   const body = block.slice(block.indexOf("{") + 1, block.lastIndexOf("}"));
   const lines = body
@@ -183,7 +197,7 @@ function parseTableBlock(block: string, tableId: string, warnings: string[]): Ta
   return {
     id: tableId,
     name: tableName,
-    color: "#fda4af",
+    color,
     position: { x: 100, y: 100 },
     comment,
     columns,
@@ -229,6 +243,7 @@ export function parseDbml(src: string): ParsedDbml {
   const tables: TableEntity[] = [];
   const rawRefs: RawRef[] = [];
   let projectDriver: string | null = null;
+  let lastTableColor: string | undefined;
 
   for (const block of blocks) {
     const trimmed = block.trim();
@@ -238,8 +253,12 @@ export function parseDbml(src: string): ParsedDbml {
       continue;
     }
     if (trimmed.startsWith("Table")) {
-      const t = parseTableBlock(trimmed, createId("tbl"), warnings);
-      if (t) tables.push(t);
+      const fallbackColor = getRandomTableColor(lastTableColor);
+      const t = parseTableBlock(trimmed, createId("tbl"), warnings, fallbackColor);
+      if (t) {
+        lastTableColor = t.color;
+        tables.push(t);
+      }
       continue;
     }
     // Ref line or Ref { ... } block
@@ -302,7 +321,12 @@ export function parseDbml(src: string): ParsedDbml {
     });
   }
 
-  return { driver, tables, relationships, warnings };
+  return {
+    driver,
+    tables: normalizeImportedTableColors(tables),
+    relationships,
+    warnings,
+  };
 }
 
 export function dbmlToDiagram(src: string): Diagram {

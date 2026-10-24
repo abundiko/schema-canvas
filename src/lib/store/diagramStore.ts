@@ -13,7 +13,10 @@ import type {
   StickyNote,
   TableEntity,
 } from "#/types/diagram";
-import { DEFAULT_TABLE_COLOR } from "#/lib/utils/palettes";
+import {
+  getRandomTableColor,
+  normalizeImportedTableColors,
+} from "#/lib/utils/palettes";
 import { createId } from "#/lib/utils/ids";
 import { layoutDiagram, type LayoutMode } from "#/lib/layout/autoLayout";
 
@@ -56,13 +59,13 @@ export function isSelectionEqual(a: Selection, b: Selection): boolean {
   }
 }
 
-function createDefaultTable(driver: Driver): TableEntity {
+function createDefaultTable(driver: Driver, color?: string): TableEntity {
   const type =
     driver === "postgresql" ? "serial" : driver === "mongodb" ? "string" : "int";
   return {
     id: createId("tbl"),
     name: "users",
-    color: DEFAULT_TABLE_COLOR,
+    color: color ?? getRandomTableColor(),
     position: { x: 0, y: 0 },
     comment: undefined,
     columns: [
@@ -292,14 +295,21 @@ export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
         set((s) => ({ diagram: { ...s.diagram, driver, updatedAt: now() } })),
 
       addTable: () => {
-        const driver = get().diagram.driver;
-        const table = createDefaultTable(driver);
-        const count = get().diagram.tables.length;
+        const s = get();
+        const driver = s.diagram.driver;
+        const tables = s.diagram.tables;
+        const lastTable = tables[tables.length - 1];
+        const color = getRandomTableColor(lastTable?.color);
+        const table = {
+          ...createDefaultTable(driver, color),
+          name: tables.length === 0 ? "users" : `table_${tables.length + 1}`,
+        };
+        const count = tables.length;
         const position = { x: count * 40, y: count * 40 };
-        set((s) => ({
+        set((st) => ({
           diagram: {
-            ...s.diagram,
-            tables: [...s.diagram.tables, { ...table, position }],
+            ...st.diagram,
+            tables: [...st.diagram.tables, { ...table, position }],
             updatedAt: now(),
           },
           selection: { type: "table", tableId: table.id },
@@ -1003,9 +1013,10 @@ export const useDiagramStore = create<DiagramStoreState>()((set, get) => {
       openDiagram: (diagram) =>
         set((s) => {
           const existing = s.tabs.find((t) => t.id === diagram.id);
-          const files = [...s.files.filter((f) => f.id !== diagram.id), { ...diagram, updatedAt: now() }];
+          const tables = normalizeImportedTableColors(diagram.tables);
+          const d = { ...diagram, tables, updatedAt: now() };
+          const files = [...s.files.filter((f) => f.id !== diagram.id), d];
           if (existing) return { files, activeTabId: existing.id, selection: { type: "none" } };
-          const d = { ...diagram, updatedAt: now() };
           return {
             tabs: [...s.tabs, d],
             files,

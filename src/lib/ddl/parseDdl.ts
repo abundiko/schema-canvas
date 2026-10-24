@@ -6,6 +6,10 @@ import type {
   TableEntity,
 } from "#/types/diagram";
 import { createId } from "#/lib/utils/ids";
+import {
+  getRandomTableColor,
+  normalizeImportedTableColors,
+} from "#/lib/utils/palettes";
 import { classifyDefault } from "#/lib/utils/defaults";
 import { getDriver } from "#/lib/drivers";
 import { splitStatements, tokenize, kw, type Token } from "./tokenize";
@@ -375,6 +379,7 @@ export function parseDdl(sql: string, options: ParseOptions = {}): ParsedDdl {
   const warnings: string[] = [];
 
   const tables: TableEntity[] = [];
+  let lastTableColor: string | undefined;
   const rawConstraints = new Map<string, RawConstraint[]>();
   const rawRelationships: RawRelationship[] = [];
 
@@ -405,7 +410,7 @@ export function parseDdl(sql: string, options: ParseOptions = {}): ParsedDdl {
       const table: TableEntity = {
         id: createId("tbl"),
         name: tableName,
-        color: "#fda4af",
+        color: (lastTableColor = getRandomTableColor(lastTableColor)),
         position: { x: 0, y: 0 },
         columns: [],
         indexes: [],
@@ -580,7 +585,12 @@ export function parseDdl(sql: string, options: ParseOptions = {}): ParsedDdl {
     });
   }
 
-  return { driver, tables, relationships, warnings };
+  return {
+    driver,
+    tables: normalizeImportedTableColors(tables),
+    relationships,
+    warnings,
+  };
 }
 
 function parseTableConstraint(

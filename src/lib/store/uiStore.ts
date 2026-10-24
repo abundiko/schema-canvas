@@ -1,6 +1,13 @@
 import { create } from "zustand";
 
-export type DialogKind = "none" | "import" | "importDbml" | "export" | "files" | "settings";
+export type DialogKind =
+  | "none"
+  | "import"
+  | "importDbml"
+  | "importJson"
+  | "export"
+  | "files"
+  | "settings";
 
 export type ThemeMode = "light" | "dark" | "system";
 

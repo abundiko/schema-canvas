@@ -121,6 +121,14 @@ export function TopNavBar() {
               >
                 <FileCode2 size={14} /> Import DBML…
               </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  close();
+                  openDialog("importJson");
+                }}
+              >
+                <FileJson size={14} /> Import JSON…
+              </MenuItem>
               <div className="my-0.5 border-t border-border" />
               {diagram.driver === "mongodb" ? (
                 <MenuItem
